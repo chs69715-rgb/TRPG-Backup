@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olhi | TRPG 로그 변환기</title>
+    <!-- Pretendard 웹폰트 -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        :root {
+            --bg-color: #1a1a24;
+            --panel-bg: #232332;
+            --accent-color: #7c5dfa;
+            --accent-hover: #603be4;
+            --text-color: #e0e0e0;
+            --border-color: #333345;
+            
+            /* 커스텀 스타일 변수 */
+            --preview-bg: #ffffff;
+            --preview-text-color: #222222;
+            --preview-font-size: 15px;
+            --scene-margin: 28px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 1. 상단 툴바 */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: #2c2c3d;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background-color: #3b3b52; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .btn-primary:hover { background-color: var(--accent-hover); }
+
+        /* 2. 메인 컨테이너 */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 420px;
+            min-width: 380px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-header {
+            display: flex;
+            background-color: #1a1a24;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: none;
+            border: none;
+            color: #8a8a9e;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+            background-color: var(--panel-bg);
+        }
+
+        .tab-content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tab-pane {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tab-pane.active { display: flex; }
+
+        .setting-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .setting-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #8a8a9e;
+            letter-spacing: 0.5px;
+        }
+
+        .file-upload-box {
+            border: 2px dashed var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.15);
+            font-size: 0.95rem;
+            color: #b0b0c0;
+            transition: all 0.2s;
+        }
+
+        .file-upload-box:hover {
+            border-color: var(--accent-color);
+            color: #fff;
+        }
+
+        .loaded-file-info {
+            display: none;
+            background: #2c2c3d;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            word-break: break-all;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: #ccc;
+        }
+
+        .text-input {
+            background-color: #1a1a24;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .text-input:focus { border-color: var(--accent-color); }
+
+        .toggle-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3a3a4d;
+            transition: .3s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .char-item {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #2c2c3d;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .char-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .char-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .char-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #1a1a24;
+            border: 1px solid var(--border-color);
+        }
+
+        .char-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .url-input-wrap {
+            display: flex;
+            gap: 6px;
+        }
+
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .color-picker-row label { font-size: 0.9rem; }
+
+        .color-input {
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .preview-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background-color: #121218;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .tistory-preview {
+            width: 100%;
+            max-width: 720px;
+            background: var(--preview-bg);
+            color: var(--preview-text-color);
+            font-size: var(--preview-font-size);
+            font-family: 'Pretendard', sans-serif;
+            padding: 36px;
+            border-radius: 8px;
+            min-height: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: background 0.2s, color 0.2s;
+            outline: none;
+        }
+
+        .empty-placeholder {
+            height: 100%;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #888;
+        }
+
+        .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+        .empty-title { font-size: 1.2rem; font-weight: 600; color: #666; margin-bottom: 8px; }
+        .empty-desc { font-size: 0.9rem; color: #888; line-height: 1.5; }
+
+        /* 모달 팝업 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            width: 360px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+        .modal-desc { font-size: 0.9rem; color: #aaa; margin-bottom: 20px; line-height: 1.4; }
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
+        /* --- 스타일 정밀 레이아웃 --- */
+        .sp-scene-text, .sp-scene-text * {
+            margin-top: 6px;
+            margin-bottom: 6px;
+            color: var(--preview-text-color);
+            line-height: 1.6;
+            font-weight: 400;
+            text-align: center;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .sp-scene-start { margin-top: var(--scene-margin) !important; }
+        .sp-scene-end { margin-bottom: var(--scene-margin) !important; }
+
+        .sp-chat-line {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .sp-chat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            background-color: #eee;
+        }
+
+        .sp-chat-body { flex: 1; }
+
+        .sp-chat-name {
+            font-weight: 700 !important;
+            font-size: 0.95em;
+            margin-bottom: 4px;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        .sp-chat-text {
+            font-weight: 400;
+            line-height: 1.5;
+            word-break: break-all;
+            white-space: pre-wrap;
+            font-family: 'Pretendard', sans-serif;
+            margin-bottom: 6px; 
+        }
+
+        .sp-chat-text:last-child {
+            margin-bottom: 0;
+        }
+
+        .sp-chat-text b, .sp-chat-text strong {
+            font-weight: 700;
+        }
+
+        .sp-dice-result {
+            display: inline-block;
+            background: rgba(124, 93, 250, 0.1);
+            color: var(--accent-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-family: monospace;
+            margin-top: 4px;
+            margin-bottom: 6px;
+        }
+
+        .tistory-preview.card-view .sp-dice-result {
+            display: block;
+            background: #f4f4f7;
+            border: 1px solid #e1e1e8;
+            padding: 10px 14px;
+            border-radius: 6px;
+            color: #444;
+            margin-top: 6px;
+            margin-bottom: 8px;
+        }
+
+        .sp-chat-divider {
+            height: 1px;
+            background-color: #e8e8e8;
+            border: none;
+            margin: 14px 0 16px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 이어서 하기 복구 팝업 모달 -->
+    <div id="restoreModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-title">💾 이전 작업 기록 발견</div>
+            <div class="modal-desc">이전에 수정하던 작업 기록이 남아있습니다.<br>이어서 작업하시겠습니까?</div>
+            <div class="modal-btns">
+                <button class="btn" onclick="clearSavedData()">새로 시작</button>
+                <button class="btn btn-primary" onclick="restoreSavedData()">이어서 하기</button>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="title">🎲 <b>Olhi</b> TRPG 로그 변환기</div>
+        <div class="toolbar-group">
+            <button class="btn" onclick="undo()" id="undoBtn" disabled title="실행 취소 (Ctrl+Z)">↩ 되돌리기</button>
+            <button class="btn" onclick="redo()" id="redoBtn" disabled title="다시 실행 (Ctrl+Y)">↪ 다시 실행</button>
+            <span style="color: var(--border-color);">|</span>
+            <button class="btn" onclick="toggleFormat('bold')" title="굵게 토글"><b>B</b></button>
+            <button class="btn" onclick="toggleFormat('italic')" title="기울임 토글"><i>I</i></button>
+            <span style="color: var(--border-color);">|</span>
+            <button class="btn btn-primary" onclick="copyTistoryCode()">📋 티스토리 코드 복사</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <aside class="sidebar">
+            <div class="tab-header">
+                <button class="tab-btn active" onclick="switchTab(0)">1. 기본/필터</button>
+                <button class="tab-btn" onclick="switchTab(1)">2. 인장/캐릭터</button>
+                <button class="tab-btn" onclick="switchTab(2)">3. 스타일/색상</button>
+            </div>
+
+            <div class="tab-content-area">
+                
+                <div class="tab-pane active" id="tab0">
+                    <div class="setting-section">
+                        <h3>파일 불러오기</h3>
+                        <div class="file-upload-box" onclick="document.getElementById('fileInput').click()">
+                            📁 파일 선택
+                            <input type="file" id="fileInput" hidden accept=".html,.htm,.json,.txt" onchange="handleFileUpload(event)">
+                        </div>
+                        <div id="loadedFileInfo" class="loaded-file-info"></div>
+
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 5px;" onclick="applySettingsWithoutLoss()">🔄 설정 적용하기</button>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>나레이션 / 지문 설정</h3>
+                        <div class="input-group">
+                            <label>지문으로 처리할 이름 (여러 명일 시 / 또는 , 로 구분)</label>
+                            <input type="text" id="narrationNames" class="text-input" placeholder="예: GM / 시스템 / 나레이션" onchange="applySettingsWithoutLoss()">
+                        </div>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>레이아웃 설정</h3>
+                        <div class="toggle-option">
+                            <span>연속 대사 이름 1회만 표시</span>
+                            <label class="switch">
+                                <input type="checkbox" id="hideDuplicateNames" onchange="applySettingsWithoutLoss()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-option">
+                            <span>대화 구분선(옅은 회색 줄) 표시</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showDivider" checked onchange="applySettingsWithoutLoss()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-option">
+                            <span>판정(주사위) 결과 표시</span>
+                            <label class="switch">
+                                <input type="checkbox" id="showDiceResults" checked onchange="applySettingsWithoutLoss()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-option">
+                            <span>판정 결과 카드형 스타일 적용</span>
+                            <label class="switch">
+                                <input type="checkbox" id="cardViewToggle" onchange="toggleCardView()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab1">
+                    <div class="setting-section">
+                        <h3>캐릭터별 인장 이미지 & 색상 설정</h3>
+                        <p style="font-size: 0.8rem; color: #888;">파일을 먼저 불러온 후 캐릭터 설정을 변경해주세요.</p>
+                        <div id="characterList" style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="color: #666; font-size: 0.85rem;">불러온 캐릭터가 없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="tab2">
+                    <div class="setting-section">
+                        <h3>본문 스타일 설정</h3>
+                        
+                        <div class="color-picker-row">
+                            <label>배경색</label>
+                            <input type="color" id="bgColorPicker" class="color-input" value="#ffffff" onchange="updateStyles()">
+                        </div>
+
+                        <div class="color-picker-row">
+                            <label>기본 글자색</label>
+                            <input type="color" id="textColorPicker" class="color-input" value="#222222" onchange="updateStyles()">
+                        </div>
+
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label>글자 크기: <span id="fontSizeVal">15px</span></label>
+                            <input type="range" id="fontSizeSlider" min="12" max="22" value="15" oninput="updateStyles()">
+                        </div>
+
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label>나레이션 전후(시작/끝) 여백: <span id="sceneMarginVal">28px</span></label>
+                            <input type="range" id="sceneMarginSlider" min="8" max="70" value="28" oninput="updateStyles()">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </aside>
+
+        <main class="preview-area">
+            <div id="tistoryPreview" class="tistory-preview" contenteditable="true" oninput="saveStateDebounced()">
+                <div class="empty-placeholder" contenteditable="false">
+                    <div class="empty-icon">📖</div>
+                    <div class="empty-title">Olhi 미리보기 준비 중</div>
+                    <div class="empty-desc">
+                        HTML 백업 로그 파일을 추가하면<br>
+                        변환 결과를 미리 확인할 수 있습니다
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        let logData = [];
+        let characterMap = {};
+        let loadedFileName = '';
+
+        let historyStack = [];
+        let historyIndex = -1;
+        let debounceTimer;
+
+        const STORAGE_KEY = 'olhi_trpg_saved_state';
+
+        // 페이지 로드 시 복구 체크
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed && parsed.logData && parsed.logData.length > 0) {
+                        document.getElementById('restoreModal').style.display = 'flex';
+                    }
+                } catch (e) {
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            }
+        });
+
+        function saveToLocalStorage(state) {
+            try {
+                const dataToSave = {
+                    ...state,
+                    loadedFileName: loadedFileName,
+                    settings: {
+                        narrationNames: document.getElementById('narrationNames').value,
+                        hideDuplicateNames: document.getElementById('hideDuplicateNames').checked,
+                        showDivider: document.getElementById('showDivider').checked,
+                        showDiceResults: document.getElementById('showDiceResults').checked,
+                        cardViewToggle: document.getElementById('cardViewToggle').checked,
+                        bgColor: document.getElementById('bgColorPicker').value,
+                        textColor: document.getElementById('textColorPicker').value,
+                        fontSize: document.getElementById('fontSizeSlider').value,
+                        sceneMargin: document.getElementById('sceneMarginSlider').value
+                    }
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            } catch (e) {
+                console.warn('로컬 저장 용량 초과 또는 오류', e);
+            }
+        }
+
+        function restoreSavedData() {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (!savedData) return;
+
+            const parsed = JSON.parse(savedData);
+            logData = parsed.logData || [];
+            characterMap = parsed.characterMap || {};
+            loadedFileName = parsed.loadedFileName || '저장된 작업 기록';
+
+            // 설정값 복구
+            if (parsed.settings) {
+                const s = parsed.settings;
+                document.getElementById('narrationNames').value = s.narrationNames || '';
+                document.getElementById('hideDuplicateNames').checked = !!s.hideDuplicateNames;
+                document.getElementById('showDivider').checked = !!s.showDivider;
+                document.getElementById('showDiceResults').checked = !!s.showDiceResults;
+                document.getElementById('cardViewToggle').checked = !!s.cardViewToggle;
+                document.getElementById('bgColorPicker').value = s.bgColor || '#ffffff';
+                document.getElementById('textColorPicker').value = s.textColor || '#222222';
+                document.getElementById('fontSizeSlider').value = s.fontSize || '15';
+                document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
+                
+                updateStyles();
+                if (s.cardViewToggle) {
+                    document.getElementById('tistoryPreview').classList.add('card-view');
+                }
+            }
+
+            // 파일 정보 UI 복구
+            const fileInfo = document.getElementById('loadedFileInfo');
+            fileInfo.style.display = 'block';
+            fileInfo.textContent = `📄 복구된 파일: ${loadedFileName}`;
+
+            // 에디터 미리보기 복구
+            document.getElementById('tistoryPreview').innerHTML = parsed.previewHtml;
+            updateCharacterListUI();
+
+            // 히스토리 초기화
+            historyStack = [{
+                previewHtml: parsed.previewHtml,
+                logData: JSON.parse(JSON.stringify(logData)),
+                characterMap: JSON.parse(JSON.stringify(characterMap))
+            }];
+            historyIndex = 0;
+            updateUndoRedoButtons();
+
+            document.getElementById('restoreModal').style.display = 'none';
+        }
+
+        function clearSavedData() {
+            localStorage.removeItem(STORAGE_KEY);
+            document.getElementById('restoreModal').style.display = 'none';
+        }
+
+        function saveStateDebounced() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                saveState();
+            }, 500);
+        }
+
+        function saveState() {
+            const previewEl = document.getElementById('tistoryPreview');
+            const currentState = {
+                previewHtml: previewEl.innerHTML,
+                logData: JSON.parse(JSON.stringify(logData)),
+                characterMap: JSON.parse(JSON.stringify(characterMap))
+            };
+
+            historyStack = historyStack.slice(0, historyIndex + 1);
+            historyStack.push(currentState);
+            historyIndex++;
+
+            updateUndoRedoButtons();
+            saveToLocalStorage(currentState);
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(historyStack[historyIndex]);
+            }
+        }
+
+        function redo() {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                restoreState(historyStack[historyIndex]);
+            }
+        }
+
+        function restoreState(state) {
+            logData = JSON.parse(JSON.stringify(state.logData));
+            characterMap = JSON.parse(JSON.stringify(state.characterMap));
+            document.getElementById('tistoryPreview').innerHTML = state.previewHtml;
+            updateCharacterListUI();
+            updateUndoRedoButtons();
+            saveToLocalStorage(state);
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('undoBtn').disabled = (historyIndex <= 0);
+            document.getElementById('redoBtn').disabled = (historyIndex >= historyStack.length - 1);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            } else if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        });
+
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const panes = document.querySelectorAll('.tab-pane');
+
+            tabs.forEach((tab, i) => {
+                if (i === index) {
+                    tab.classList.add('active');
+                    panes[i].classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                    panes[i].classList.remove('active');
+                }
+            });
+        }
+
+        function rgbToHex(color) {
+            if (!color) return '#333333';
+            if (color.startsWith('#')) {
+                if (color.length === 4) {
+                    return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+                }
+                return color;
+            }
+            const ctx = document.createElement('canvas').getContext('2d');
+            ctx.fillStyle = color;
+            return ctx.fillStyle;
+        }
+
+        function parseCcfoliaHtml(htmlString) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            const parsedLogs = [];
+            characterMap = {};
+
+            const pTags = doc.querySelectorAll('p');
+
+            pTags.forEach(p => {
+                const style = p.getAttribute('style') || '';
+                const colorMatch = style.match(/color\s*:\s*([^;]+)/);
+                const rawColor = colorMatch ? colorMatch[1].trim() : '#333333';
+                const hexColor = rgbToHex(rawColor);
+
+                const spans = p.querySelectorAll('span');
+
+                if (spans.length >= 3) {
+                    const tabName = spans[0].textContent.trim().replace('[', '').replace(']', '');
+                    const name = spans[1].textContent.trim();
+                    
+                    let content = spans[2].innerHTML
+                        .replace(/<br\s*[\/]?>/gi, '\n')
+                        .replace(/<[^>]+>/g, '')
+                        .trim();
+
+                    const imgTag = p.querySelector('img');
+                    const icon = imgTag ? imgTag.getAttribute('src') : '';
+
+                    if (name && characterMap[name] === undefined) {
+                        characterMap[name] = {
+                            icon: icon || '',
+                            color: hexColor
+                        };
+                    }
+
+                    if (content.includes('CCB') || content.includes('＞') || content.includes('1D100') || content.includes('1d100')) {
+                        parsedLogs.push({
+                            type: 'dice',
+                            tab: tabName,
+                            name: name,
+                            text: '판정 수행',
+                            result: content
+                        });
+                    } else {
+                        parsedLogs.push({
+                            type: 'chat',
+                            tab: tabName,
+                            name: name,
+                            text: content
+                        });
+                    }
+                } else {
+                    const text = p.textContent.trim();
+                    if (text) {
+                        parsedLogs.push({
+                            type: 'text',
+                            text: text
+                        });
+                    }
+                }
+            });
+
+            updateCharacterListUI();
+            return parsedLogs;
+        }
+
+        function updateCharacterListUI() {
+            const container = document.getElementById('characterList');
+            container.innerHTML = '';
+
+            const charNames = Object.keys(characterMap);
+            if (charNames.length === 0) {
+                container.innerHTML = '<div style="color: #666; font-size: 0.85rem;">불러온 캐릭터가 없습니다.</div>';
+                return;
+            }
+
+            charNames.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'char-item';
+                
+                const currentChar = characterMap[name] || { icon: '', color: '#333333' };
+
+                item.innerHTML = `
+                    <div class="char-item-header">
+                        <div class="char-item-left">
+                            <img class="char-avatar" id="avatar-${name}" src="${currentChar.icon}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'36\' height=\'36\'><circle cx=\'18\' cy=\'18\' r=\'18\' fill=\'%233a3a4d\'/></svg>'" />
+                            <span class="char-name">${name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <label style="font-size: 0.75rem; color: #aaa;">이름 색상</label>
+                            <input type="color" id="color-input-${name}" class="color-input" value="${currentChar.color}" onchange="updateCharColor('${name}')">
+                        </div>
+                    </div>
+                    <div class="url-input-wrap">
+                        <input type="text" id="url-input-${name}" class="text-input" style="flex:1;" placeholder="이미지 URL 주소 입력" value="${currentChar.icon}">
+                        <button class="btn btn-primary" onclick="updateCharUrl('${name}')">적용</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function updateCharUrl(name) {
+            const inputVal = document.getElementById(`url-input-${name}`).value.trim();
+            if (characterMap[name]) {
+                characterMap[name].icon = inputVal;
+            }
+            const imgEl = document.getElementById(`avatar-${name}`);
+            if (imgEl) imgEl.src = inputVal;
+            applySettingsWithoutLoss();
+        }
+
+        function updateCharColor(name) {
+            const colorVal = document.getElementById(`color-input-${name}`).value;
+            if (characterMap[name]) {
+                characterMap[name].color = colorVal;
+            }
+            applySettingsWithoutLoss();
+        }
+
+        function applySettingsWithoutLoss() {
+            renderLogs();
+            saveState();
+        }
+
+        function renderLogs() {
+            const preview = document.getElementById('tistoryPreview');
+            
+            if (logData.length === 0) {
+                preview.innerHTML = `
+                <div class="empty-placeholder" contenteditable="false">
+                    <div class="empty-icon">📖</div>
+                    <div class="empty-title">Olhi 미리보기 준비 중</div>
+                    <div class="empty-desc">
+                        HTML 백업 로그 파일을 추가하면<br>
+                        변환 결과를 미리 확인할 수 있습니다
+                    </div>
+                </div>`;
+                return;
+            }
+
+            const hideDuplicate = document.getElementById('hideDuplicateNames').checked;
+            const showDivider = document.getElementById('showDivider').checked;
+            const showDice = document.getElementById('showDiceResults').checked;
+            
+            const narrationInput = document.getElementById('narrationNames').value;
+            const narrationList = narrationInput
+                .split(/[\/,]/)
+                .map(s => s.trim().toLowerCase())
+                .filter(s => s);
+
+            const checkIsNarration = (logItem) => {
+                if (!logItem) return false;
+                if (logItem.type === 'text') return true;
+                if (logItem.name && narrationList.includes(logItem.name.toLowerCase())) return true;
+                return false;
+            };
+
+            let html = '';
+            let currentGroup = null;
+
+            logData.forEach((log, index) => {
+                const isNarration = checkIsNarration(log);
+
+                if (isNarration) {
+                    if (currentGroup) {
+                        html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+                        if (showDivider) html += `<hr class="sp-chat-divider">`;
+                        currentGroup = null;
+                    }
+
+                    const prevLog = logData[index - 1];
+                    const nextLog = logData[index + 1];
+                    const prevIsNarration = checkIsNarration(prevLog);
+                    const nextIsNarration = checkIsNarration(nextLog);
+
+                    let sceneClasses = ['sp-scene-text'];
+                    if (index === 0 || !prevIsNarration) sceneClasses.push('sp-scene-start');
+                    if (index === logData.length - 1 || !nextIsNarration) sceneClasses.push('sp-scene-end');
+
+                    html += `
+                    <div class="${sceneClasses.join(' ')}">
+                        <p data-ke-size="size16">${log.text}</p>
+                    </div>`;
+                } else {
+                    const charInfo = characterMap[log.name] || { color: '#333333', icon: '' };
+                    
+                    if (!currentGroup) {
+                        currentGroup = {
+                            name: log.name,
+                            color: charInfo.color,
+                            items: [log]
+                        };
+                    } else {
+                        if (hideDuplicate && currentGroup.name === log.name) {
+                            currentGroup.items.push(log);
+                        } else {
+                            html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+                            if (showDivider) html += `<hr class="sp-chat-divider">`;
+                            
+                            currentGroup = {
+                                name: log.name,
+                                color: charInfo.color,
+                                items: [log]
+                            };
+                        }
+                    }
+                }
+            });
+
+            if (currentGroup) {
+                html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+            }
+
+            preview.innerHTML = html;
+        }
+
+        function renderChatGroup(group, hideDuplicate, showDice) {
+            const charInfo = characterMap[group.name] || { icon: '', color: '#333333' };
+            const iconSrc = charInfo.icon;
+            const nameColor = charInfo.color;
+
+            let groupBodyInner = `<div class="sp-chat-name" style="color:${nameColor}">${group.name || ''}</div>`;
+
+            group.items.forEach(item => {
+                groupBodyInner += `<div class="sp-chat-text">${item.text || ''}</div>`;
+                if (item.result && showDice) {
+                    groupBodyInner += `<div class="sp-dice-result">🎲 ${item.result}</div>`;
+                }
+            });
+
+            return `
+            <div class="sp-chat-line">
+                ${iconSrc ? `<img class="sp-chat-icon" src="${iconSrc}" alt="" />` : '<div class="sp-chat-icon"></div>'}
+                <div class="sp-chat-body">
+                    ${groupBodyInner}
+                </div>
+            </div>`;
+        }
+
+        function updateStyles() {
+            const bg = document.getElementById('bgColorPicker').value;
+            const text = document.getElementById('textColorPicker').value;
+            const size = document.getElementById('fontSizeSlider').value;
+            const margin = document.getElementById('sceneMarginSlider').value;
+
+            document.getElementById('fontSizeVal').textContent = size + 'px';
+            document.getElementById('sceneMarginVal').textContent = margin + 'px';
+
+            document.documentElement.style.setProperty('--preview-bg', bg);
+            document.documentElement.style.setProperty('--preview-text-color', text);
+            document.documentElement.style.setProperty('--preview-font-size', size + 'px');
+            document.documentElement.style.setProperty('--scene-margin', margin + 'px');
+
+            saveStateDebounced();
+        }
+
+        // 새 파일 선택 시 이전 기록 초기화 후 로드
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 기존 히스토리 및 자동저장 데이터 초기화
+            localStorage.removeItem(STORAGE_KEY);
+            historyStack = [];
+            historyIndex = -1;
+
+            loadedFileName = file.name;
+            const fileInfo = document.getElementById('loadedFileInfo');
+            fileInfo.style.display = 'block';
+            fileInfo.textContent = `📄 불러온 파일: ${loadedFileName}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                logData = parseCcfoliaHtml(content);
+                applySettingsWithoutLoss();
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function copyTistoryCode() {
+            if (logData.length === 0) {
+                alert('복사할 로그가 없습니다. 먼저 파일을 선택해주세요.');
+                return;
+            }
+
+            const textColor = document.getElementById('textColorPicker').value;
+            const fontSize = document.getElementById('fontSizeSlider').value + 'px';
+            const sceneMargin = document.getElementById('sceneMarginSlider').value + 'px';
+
+            const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  .sp-scene-text, .sp-scene-text * {
+      margin-top: 6px !important;
+      margin-bottom: 6px !important;
+      color: ${textColor} !important;
+      font-size: ${fontSize} !important;
+      line-height: 1.6 !important;
+      font-weight: 400;
+      text-align: center !important;
+      font-family: 'Pretendard', sans-serif !important;
+  }
+  .sp-scene-start { margin-top: ${sceneMargin} !important; }
+  .sp-scene-end { margin-bottom: ${sceneMargin} !important; }
+  .sp-chat-line {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 12px !important;
+      margin-bottom: 16px !important;
+      align-items: flex-start !important;
+  }
+  .sp-chat-icon {
+      width: 44px !important;
+      height: 44px !important;
+      max-width: 44px !important;
+      max-height: 44px !important;
+      border-radius: 50% !important;
+      object-fit: cover !important;
+      flex-shrink: 0 !important;
+      display: block !important;
+  }
+  .sp-chat-body { flex: 1 !important; color: ${textColor} !important; font-size: ${fontSize} !important; }
+  .sp-chat-name {
+      font-weight: 700 !important;
+      font-size: 0.95em !important;
+      margin-bottom: 4px !important;
+      font-family: 'Pretendard', sans-serif !important;
+  }
+  .sp-chat-text {
+      font-weight: 400;
+      line-height: 1.5 !important;
+      word-break: break-all !important;
+      white-space: pre-wrap !important;
+      font-family: 'Pretendard', sans-serif !important;
+      margin-bottom: 6px !important;
+  }
+  .sp-chat-text:last-child {
+      margin-bottom: 0 !important;
+  }
+  .sp-chat-text b, .sp-chat-text strong {
+      font-weight: 700 !important;
+  }
+  .sp-chat-divider {
+      height: 1px !important;
+      background-color: #e8e8e8 !important;
+      margin: 14px 0 16px 0 !important;
+      border: none !important;
+  }
+  .sp-dice-result {
+      display: inline-block !important;
+      background: rgba(124, 93, 250, 0.1) !important;
+      color: #7c5dfa !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      font-size: 0.85em !important;
+      margin-top: 4px !important;
+      margin-bottom: 6px !important;
+  }
+</style>
+`;
+
+            const previewHtml = document.getElementById('tistoryPreview').innerHTML;
+            const finalHtml = embeddedCss + previewHtml;
+
+            navigator.clipboard.writeText(finalHtml).then(() => {
+                alert('티스토리에 붙여넣을 HTML 코드가 복사되었습니다!\n\n티스토리 글쓰기 우측 상단에서 [HTML 모드]로 변경 후 붙여넣어주세요.');
+            }).catch(err => {
+                alert('복사 실패: ' + err);
+            });
+        }
+
+        function toggleCardView() {
+            const isCard = document.getElementById('cardViewToggle').checked;
+            const preview = document.getElementById('tistoryPreview');
+            if (isCard) {
+                preview.classList.add('card-view');
+            } else {
+                preview.classList.remove('card-view');
+            }
+            saveState();
+        }
+
+        function toggleFormat(command) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) {
+                alert('서식을 적용하거나 해제할 텍스트를 드래그하여 선택해주세요.');
+                return;
+            }
+
+            document.execCommand(command, false, null);
+            saveState();
+        }
+    </script>
+</body>
+</html>
