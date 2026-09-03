@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olhi | TRPG 로그 변환기</title>
+    <title>TRPG 로그 변환기</title>
     <!-- Pretendard 웹폰트 -->
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
@@ -15,11 +15,23 @@
             --text-color: #e0e0e0;
             --border-color: #333345;
             
-            /* 커스텀 스타일 변수 */
             --preview-bg: #ffffff;
             --preview-text-color: #222222;
             --preview-font-size: 15px;
             --scene-margin: 28px;
+
+            /* 모던 판정 카드 커스텀 변수 기본값 */
+            --modern-card-bg: #f1f5f8;
+            --modern-card-border: #e2e8f0;
+
+            /* 모던 판정 배지(제목) 커스텀 변수 기본값 */
+            --modern-badge-bg: #eef3f6;
+            --modern-badge-border: #d4dfe5;
+            --modern-badge-bg-image: none;
+
+            /* 일반형 판정 커스텀 변수 기본값 */
+            --normal-result-bg: #f3eefd;
+            --normal-result-border: #7c5dfa;
         }
 
         * {
@@ -38,7 +50,6 @@
             overflow: hidden;
         }
 
-        /* 1. 상단 툴바 */
         header {
             background-color: var(--panel-bg);
             border-bottom: 1px solid var(--border-color);
@@ -85,7 +96,6 @@
 
         .btn-primary:hover { background-color: var(--accent-hover); }
 
-        /* 2. 메인 컨테이너 */
         .container {
             display: flex;
             flex: 1;
@@ -110,11 +120,11 @@
 
         .tab-btn {
             flex: 1;
-            padding: 12px 8px;
+            padding: 12px 6px;
             background: none;
             border: none;
             color: #8a8a9e;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             font-weight: 600;
             cursor: pointer;
             text-align: center;
@@ -157,10 +167,11 @@
         }
 
         .setting-section h3 {
-            font-size: 0.85rem;
+            font-size: 0.92rem;
             text-transform: uppercase;
-            color: #8a8a9e;
+            color: #b0b0c5;
             letter-spacing: 0.5px;
+            font-weight: 700;
         }
 
         .file-upload-box {
@@ -298,9 +309,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
         }
 
-        .color-picker-row label { font-size: 0.9rem; }
+        .color-picker-row label { font-size: 0.85rem; }
 
         .color-input {
             border: none;
@@ -332,8 +344,23 @@
             border-radius: 8px;
             min-height: 100%;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            transition: background 0.2s, color 0.2s;
             outline: none;
+            user-select: text;
+        }
+
+        .tistory-preview img {
+            max-width: 100%;
+            height: auto;
+            display: inline-block;
+            margin: 12px auto;
+            border-radius: 6px;
+            cursor: pointer;
+            resize: both;
+            overflow: auto;
+            vertical-align: middle;
+        }
+        .tistory-preview img:hover {
+            outline: 2px dashed var(--accent-color);
         }
 
         .empty-placeholder {
@@ -351,7 +378,6 @@
         .empty-title { font-size: 1.2rem; font-weight: 600; color: #666; margin-bottom: 8px; }
         .empty-desc { font-size: 0.9rem; color: #888; line-height: 1.5; }
 
-        /* 모달 팝업 스타일 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -376,7 +402,56 @@
         .modal-desc { font-size: 0.9rem; color: #aaa; margin-bottom: 20px; line-height: 1.4; }
         .modal-btns { display: flex; gap: 10px; justify-content: center; }
 
-        /* --- 스타일 정밀 레이아웃 --- */
+        /* 블록 제어 바 (보라색 바탕) */
+        .log-block-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .log-block-wrapper:hover .move-handle {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .move-handle {
+            position: absolute;
+            top: -12px;
+            right: 0;
+            background: rgba(124, 93, 250, 0.95);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 4px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 20;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .move-handle button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            padding: 2px 6px;
+            cursor: pointer;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
+            width: 24px;
+        }
+        .move-handle button svg {
+            width: 14px;
+            height: 14px;
+            fill: #ffffff;
+            display: block;
+        }
+        .move-handle button:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
         .sp-scene-text, .sp-scene-text * {
             margin-top: 6px;
             margin-bottom: 6px;
@@ -394,7 +469,6 @@
             display: flex;
             gap: 12px;
             align-items: flex-start;
-            margin-bottom: 16px;
         }
 
         .sp-chat-icon {
@@ -419,7 +493,6 @@
             font-weight: 400;
             line-height: 1.5;
             word-break: break-all;
-            white-space: pre-wrap;
             font-family: 'Pretendard', sans-serif;
             margin-bottom: 6px; 
         }
@@ -430,6 +503,19 @@
 
         .sp-chat-text b, .sp-chat-text strong {
             font-weight: 700;
+        }
+
+        .sp-dice-only-line {
+            display: flex;
+            justify-content: center;
+            margin: 16px 0;
+            width: 100%;
+        }
+
+        .sp-dice-only-body {
+            width: 100%;
+            max-width: 580px;
+            text-align: center;
         }
 
         .sp-dice-result {
@@ -444,15 +530,160 @@
             margin-bottom: 6px;
         }
 
+        /* 기본 카드형 스타일 */
         .tistory-preview.card-view .sp-dice-result {
             display: block;
-            background: #f4f4f7;
-            border: 1px solid #e1e1e8;
-            padding: 10px 14px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+            margin-top: 0;
+            margin-bottom: 0;
+            overflow: hidden;
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+        }
+        .tistory-preview.card-view .dice-card-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .tistory-preview.card-view .dice-card-table th {
+            border: 1px solid #111;
+            background-color: #000;
+            color: #fff;
+            padding: 8px;
+            font-weight: 700;
+        }
+        .tistory-preview.card-view .dice-card-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            background-color: #fff;
+            color: #222;
+        }
+
+        /* 일반형 판정 스타일 (변수 적용) */
+        .tistory-preview.plain-view .sp-dice-result {
+            display: block;
+            background: var(--normal-result-bg);
+            border: 1px solid var(--normal-result-border);
+            padding: 8px 12px;
             border-radius: 6px;
-            color: #444;
-            margin-top: 6px;
-            margin-bottom: 8px;
+            color: inherit;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        /* 모던 판정 카드 스타일 (표준 details/summary 토글 적용) */
+        .tistory-preview.modern-card-view .sp-dice-result {
+            display: block;
+            background: transparent;
+            border: none;
+            padding: 0;
+            border-radius: 0;
+            color: inherit;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+        }
+
+        /* 표준 HTML details/summary 토글 스타일링 */
+        .modern-details-toggle {
+            display: block;
+            border: none;
+            background: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        .modern-details-toggle summary {
+            list-style: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .modern-details-toggle summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .modern-dice-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--modern-badge-bg);
+            background-image: var(--modern-badge-bg-image);
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--modern-badge-border);
+            padding: 12px 54px;
+            border-radius: 30px;
+            font-size: 0.94em;
+            font-weight: 700;
+            color: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .modern-dice-badge:hover {
+            opacity: 0.9;
+        }
+
+        .modern-dice-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--modern-card-bg);
+            border: 1px solid var(--modern-card-border);
+            border-radius: 12px;
+            padding: 14px 20px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modern-dice-col {
+            flex: 1;
+            text-align: center;
+            font-size: 0.85em; 
+            position: relative;
+        }
+
+        .modern-dice-col:not(:last-child):after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1px;
+            height: 18px; 
+            background-color: #cbd5e1;
+        }
+
+        .modern-col-name {
+            font-weight: 700;
+            color: #222;
+        }
+
+        .modern-col-result {
+            font-weight: 700;
+        }
+
+        .modern-col-desc {
+            color: #555;
+            font-size: 0.85em; 
         }
 
         .sp-chat-divider {
@@ -465,26 +696,35 @@
 </head>
 <body>
 
-    <!-- 이어서 하기 복구 팝업 모달 -->
-    <div id="restoreModal" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-title">💾 이전 작업 기록 발견</div>
-            <div class="modal-desc">이전에 수정하던 작업 기록이 남아있습니다.<br>이어서 작업하시겠습니까?</div>
+    <!-- 이미지 관리 모달 -->
+    <div id="imageMenuModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="width: 300px;">
+            <div class="modal-title">🖼️ 이미지 관리</div>
+            <div class="modal-desc" style="margin-bottom: 15px;">이미지 모서리를 드래그해 크기를 조절하거나,<br>아래 버튼을 눌러 삭제할 수 있습니다.</div>
             <div class="modal-btns">
-                <button class="btn" onclick="clearSavedData()">새로 시작</button>
-                <button class="btn btn-primary" onclick="restoreSavedData()">이어서 하기</button>
+                <button class="btn" onclick="closeImageMenuModal()">닫기</button>
+                <button class="btn" style="background-color: #d9534f; border-color: #d9534f;" onclick="deleteSelectedImage()">이미지 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이전 작업 복원 확인 모달 -->
+    <div id="resumeModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-title">📂 이전 작업 복원</div>
+            <div class="modal-desc">이전에 작업하던 내용이 있습니다.<br>이어서 하시겠습니까?</div>
+            <div class="modal-btns">
+                <button class="btn" onclick="discardSavedState()">새로 작성하기</button>
+                <button class="btn btn-primary" onclick="acceptSavedState()">이어서 하기</button>
             </div>
         </div>
     </div>
 
     <header>
-        <div class="title">🎲 <b>Olhi</b> TRPG 로그 변환기</div>
+        <div class="title">🎲 TRPG 로그 변환기</div>
         <div class="toolbar-group">
             <button class="btn" onclick="undo()" id="undoBtn" disabled title="실행 취소 (Ctrl+Z)">↩ 되돌리기</button>
             <button class="btn" onclick="redo()" id="redoBtn" disabled title="다시 실행 (Ctrl+Y)">↪ 다시 실행</button>
-            <span style="color: var(--border-color);">|</span>
-            <button class="btn" onclick="toggleFormat('bold')" title="굵게 토글"><b>B</b></button>
-            <button class="btn" onclick="toggleFormat('italic')" title="기울임 토글"><i>I</i></button>
             <span style="color: var(--border-color);">|</span>
             <button class="btn btn-primary" onclick="copyTistoryCode()">📋 티스토리 코드 복사</button>
         </div>
@@ -497,6 +737,7 @@
                 <button class="tab-btn active" onclick="switchTab(0)">1. 기본/필터</button>
                 <button class="tab-btn" onclick="switchTab(1)">2. 인장/캐릭터</button>
                 <button class="tab-btn" onclick="switchTab(2)">3. 스타일/색상</button>
+                <button class="tab-btn" onclick="switchTab(3)">4. 판정/주사위</button>
             </div>
 
             <div class="tab-content-area">
@@ -509,17 +750,17 @@
                             <input type="file" id="fileInput" hidden accept=".html,.htm,.json,.txt" onchange="handleFileUpload(event)">
                         </div>
                         <div id="loadedFileInfo" class="loaded-file-info"></div>
-
-                        <button class="btn btn-primary" style="width: 100%; margin-top: 5px;" onclick="applySettingsWithoutLoss()">🔄 설정 적용하기</button>
                     </div>
 
                     <div class="setting-section">
                         <h3>나레이션 / 지문 설정</h3>
                         <div class="input-group">
                             <label>지문으로 처리할 이름 (여러 명일 시 / 또는 , 로 구분)</label>
-                            <input type="text" id="narrationNames" class="text-input" placeholder="예: GM / 시스템 / 나레이션" onchange="applySettingsWithoutLoss()">
+                            <input type="text" id="narrationNames" class="text-input" placeholder="예: GM / 시스템 / 나레이션">
                         </div>
                     </div>
+
+                    <button class="btn btn-primary" style="width: 100%;" onclick="applySettingsWithoutLoss()">🔄 설정 적용하기</button>
 
                     <div class="setting-section">
                         <h3>레이아웃 설정</h3>
@@ -538,22 +779,6 @@
                                 <span class="slider"></span>
                             </label>
                         </div>
-
-                        <div class="toggle-option">
-                            <span>판정(주사위) 결과 표시</span>
-                            <label class="switch">
-                                <input type="checkbox" id="showDiceResults" checked onchange="applySettingsWithoutLoss()">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-
-                        <div class="toggle-option">
-                            <span>판정 결과 카드형 스타일 적용</span>
-                            <label class="switch">
-                                <input type="checkbox" id="cardViewToggle" onchange="toggleCardView()">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
                     </div>
                 </div>
 
@@ -569,7 +794,45 @@
 
                 <div class="tab-pane" id="tab2">
                     <div class="setting-section">
-                        <h3>본문 스타일 설정</h3>
+                        <h3>텍스트 편집 툴바</h3>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('bold')" title="굵게"><b>B</b></button>
+                            <button class="btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('italic')" title="기울임"><i>I</i></button>
+                            <button class="btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('underline')" title="밑줄"><u>U</u></button>
+                            <button class="btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('strike')" title="취소선"><s>S</s></button>
+                        </div>
+
+                        <div class="color-picker-row" style="margin-top: 5px;">
+                            <label style="font-size: 0.85rem;">선택 글자 색상</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="applyTextColor()">적용</button>
+                                <input type="color" id="selectedTextColorPicker" class="color-input" value="#7c5dfa">
+                            </div>
+                        </div>
+
+                        <div class="color-picker-row">
+                            <label style="font-size: 0.85rem;">글자 배경(형광펜)</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn" style="padding: 6px 10px; font-size: 0.8rem; background-color: #3b2e4b; color: #ffb3b3;" onclick="applyTextTransparentBg()" title="선택한 영역의 형광펜 효과 제거(투명색)">투명색</button>
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="applyTextBg()">적용</button>
+                                <input type="color" id="selectedTextBgPicker" class="color-input" value="#ffeb3b">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-section" style="margin-top: 5px;">
+                        <h3>본문 이미지 삽입</h3>
+                        <div class="input-group">
+                            <label>이미지 URL 주소</label>
+                            <div class="url-input-wrap">
+                                <input type="text" id="bodyImageUrlInput" class="text-input" style="flex:1;" placeholder="https://example.com/image.png">
+                                <button class="btn btn-primary" onclick="insertImageToPreview()">삽입</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-section" style="margin-top: 5px;">
+                        <h3>본문 전체 스타일 설정</h3>
                         
                         <div class="color-picker-row">
                             <label>배경색</label>
@@ -593,15 +856,94 @@
                     </div>
                 </div>
 
+                <div class="tab-pane" id="tab3">
+                    <!-- 1. 기본 판정 결과 일반형 스타일 -->
+                    <div class="setting-section">
+                        <h3>기본 판정 결과 일반형 스타일</h3>
+                        <div class="toggle-option">
+                            <span>기본 판정 결과 일반형 스타일 적용</span>
+                            <label class="switch">
+                                <input type="checkbox" id="plainViewToggle" onchange="togglePlainView()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 일반형 판정 색상 설정 -->
+                        <div class="color-picker-row" style="margin-top: 8px;">
+                            <label>일반형 배경색</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="updateNormalResultStyle()">적용</button>
+                                <input type="color" id="normalResultBgPicker" class="color-input" value="#f3eefd">
+                            </div>
+                        </div>
+
+                        <div class="color-picker-row" style="margin-top: 5px;">
+                            <label>일반형 테두리 색상</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="updateNormalResultStyle()">적용</button>
+                                <input type="color" id="normalResultBorderPicker" class="color-input" value="#7c5dfa">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 기본 판정 결과 카드형 스타일 -->
+                    <div class="setting-section" style="margin-top: 5px;">
+                        <h3>기본 판정 결과 카드형 스타일</h3>
+                        <div class="toggle-option">
+                            <span>기본 판정 결과 카드형 스타일 적용</span>
+                            <label class="switch">
+                                <input type="checkbox" id="cardViewToggle" checked onchange="toggleCardView()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. 모던 판정 카드 스타일 -->
+                    <div class="setting-section" style="margin-top: 5px;">
+                        <h3>모던 판정 카드 스타일</h3>
+                        <div class="toggle-option">
+                            <span>모던 판정 카드 스타일 적용</span>
+                            <label class="switch">
+                                <input type="checkbox" id="modernCardViewToggle" onchange="toggleModernCardView()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label>배경 이미지 URL (판정 제목에만 적용)</label>
+                            <div class="url-input-wrap">
+                                <input type="text" id="modernCardImgInput" class="text-input" style="flex:1;" placeholder="https://example.com/bg.png">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="updateModernCardStyle()">적용</button>
+                            </div>
+                        </div>
+
+                        <div class="color-picker-row" style="margin-top: 5px;">
+                            <label>카드 및 제목 배경색</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="updateModernCardStyle()">적용</button>
+                                <input type="color" id="modernCardBgPicker" class="color-input" value="#f1f5f8">
+                            </div>
+                        </div>
+
+                        <div class="color-picker-row" style="margin-top: 5px;">
+                            <label>카드 및 제목 테두리 색상</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="updateModernCardStyle()">적용</button>
+                                <input type="color" id="modernCardBorderPicker" class="color-input" value="#e2e8f0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </aside>
 
         <main class="preview-area">
-            <div id="tistoryPreview" class="tistory-preview" contenteditable="true" oninput="saveStateDebounced()">
+            <div id="tistoryPreview" class="tistory-preview" contenteditable="true" tabindex="0" onclick="saveState()" oninput="syncEditableContent()">
                 <div class="empty-placeholder" contenteditable="false">
                     <div class="empty-icon">📖</div>
-                    <div class="empty-title">Olhi 미리보기 준비 중</div>
+                    <div class="empty-title">미리보기 준비 중</div>
                     <div class="empty-desc">
                         HTML 백업 로그 파일을 추가하면<br>
                         변환 결과를 미리 확인할 수 있습니다
@@ -619,40 +961,132 @@
 
         let historyStack = [];
         let historyIndex = -1;
-        let debounceTimer;
+        let selectedImgElement = null;
+        let pendingSavedData = null;
 
-        const STORAGE_KEY = 'olhi_trpg_saved_state';
+        const STORAGE_KEY = 'trpg_log_saved_state_v14';
 
-        // 페이지 로드 시 복구 체크
         window.addEventListener('DOMContentLoaded', () => {
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (savedData) {
                 try {
                     const parsed = JSON.parse(savedData);
                     if (parsed && parsed.logData && parsed.logData.length > 0) {
-                        document.getElementById('restoreModal').style.display = 'flex';
+                        pendingSavedData = parsed;
+                        document.getElementById('resumeModal').style.display = 'flex';
                     }
                 } catch (e) {
+                    console.warn('저장된 데이터 파싱 오류', e);
                     localStorage.removeItem(STORAGE_KEY);
                 }
             }
+
+            const previewEl = document.getElementById('tistoryPreview');
+            previewEl.addEventListener('click', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    selectedImgElement = e.target;
+                    saveState();
+                }
+            });
+
+            previewEl.addEventListener('dblclick', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    selectedImgElement = e.target;
+                    document.getElementById('imageMenuModal').style.display = 'flex';
+                }
+            });
+
+            switchTab(0);
+            updateCardViewClasses();
+            updateModernCardStyle();
+            updateNormalResultStyle();
         });
 
-        function saveToLocalStorage(state) {
+        function acceptSavedState() {
+            document.getElementById('resumeModal').style.display = 'none';
+            if (pendingSavedData) {
+                const parsed = pendingSavedData;
+                logData = parsed.logData || [];
+                characterMap = parsed.characterMap || {};
+                loadedFileName = parsed.loadedFileName || '저장된 작업 기록';
+
+                if (parsed.settings) {
+                    const s = parsed.settings;
+                    document.getElementById('narrationNames').value = s.narrationNames || '';
+                    document.getElementById('hideDuplicateNames').checked = !!s.hideDuplicateNames;
+                    document.getElementById('showDivider').checked = !!s.showDivider;
+                    document.getElementById('plainViewToggle').checked = !!s.plainViewToggle;
+                    document.getElementById('cardViewToggle').checked = s.cardViewToggle !== undefined ? s.cardViewToggle : true;
+                    document.getElementById('modernCardViewToggle').checked = !!s.modernCardViewToggle;
+                    document.getElementById('bgColorPicker').value = s.bgColor || '#ffffff';
+                    document.getElementById('textColorPicker').value = s.textColor || '#222222';
+                    document.getElementById('fontSizeSlider').value = s.fontSize || '15';
+                    document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
+
+                    if (s.modernCardImg !== undefined) document.getElementById('modernCardImgInput').value = s.modernCardImg;
+                    if (s.modernCardBg !== undefined) document.getElementById('modernCardBgPicker').value = s.modernCardBg;
+                    if (s.modernCardBorder !== undefined) document.getElementById('modernCardBorderPicker').value = s.modernCardBorder;
+                    if (s.normalResultBg !== undefined) document.getElementById('normalResultBgPicker').value = s.normalResultBg;
+                    if (s.normalResultBorder !== undefined) document.getElementById('normalResultBorderPicker').value = s.normalResultBorder;
+                    
+                    updateStyles();
+                    updateModernCardStyle();
+                    updateNormalResultStyle();
+                    updateCardViewClasses();
+                }
+
+                const fileInfo = document.getElementById('loadedFileInfo');
+                fileInfo.style.display = 'block';
+                fileInfo.textContent = `📄 복구된 파일: ${loadedFileName}`;
+
+                updateCharacterListUI();
+
+                if (parsed.previewHtml) {
+                    document.getElementById('tistoryPreview').innerHTML = parsed.previewHtml;
+                } else {
+                    renderLogs();
+                }
+
+                historyStack = [{
+                    logData: JSON.parse(JSON.stringify(logData)),
+                    characterMap: JSON.parse(JSON.stringify(characterMap)),
+                    previewHtml: document.getElementById('tistoryPreview').innerHTML
+                }];
+                historyIndex = 0;
+                updateUndoRedoButtons();
+            }
+            pendingSavedData = null;
+        }
+
+        function discardSavedState() {
+            document.getElementById('resumeModal').style.display = 'none';
+            localStorage.removeItem(STORAGE_KEY);
+            pendingSavedData = null;
+        }
+
+        function saveToLocalStorage() {
             try {
                 const dataToSave = {
-                    ...state,
+                    logData: logData,
+                    characterMap: characterMap,
                     loadedFileName: loadedFileName,
+                    previewHtml: document.getElementById('tistoryPreview').innerHTML,
                     settings: {
                         narrationNames: document.getElementById('narrationNames').value,
                         hideDuplicateNames: document.getElementById('hideDuplicateNames').checked,
                         showDivider: document.getElementById('showDivider').checked,
-                        showDiceResults: document.getElementById('showDiceResults').checked,
+                        plainViewToggle: document.getElementById('plainViewToggle').checked,
                         cardViewToggle: document.getElementById('cardViewToggle').checked,
+                        modernCardViewToggle: document.getElementById('modernCardViewToggle').checked,
                         bgColor: document.getElementById('bgColorPicker').value,
                         textColor: document.getElementById('textColorPicker').value,
                         fontSize: document.getElementById('fontSizeSlider').value,
-                        sceneMargin: document.getElementById('sceneMarginSlider').value
+                        sceneMargin: document.getElementById('sceneMarginSlider').value,
+                        modernCardImg: document.getElementById('modernCardImgInput').value,
+                        modernCardBg: document.getElementById('modernCardBgPicker').value,
+                        modernCardBorder: document.getElementById('modernCardBorderPicker').value,
+                        normalResultBg: document.getElementById('normalResultBgPicker').value,
+                        normalResultBorder: document.getElementById('normalResultBorderPicker').value
                     }
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
@@ -661,73 +1095,11 @@
             }
         }
 
-        function restoreSavedData() {
-            const savedData = localStorage.getItem(STORAGE_KEY);
-            if (!savedData) return;
-
-            const parsed = JSON.parse(savedData);
-            logData = parsed.logData || [];
-            characterMap = parsed.characterMap || {};
-            loadedFileName = parsed.loadedFileName || '저장된 작업 기록';
-
-            // 설정값 복구
-            if (parsed.settings) {
-                const s = parsed.settings;
-                document.getElementById('narrationNames').value = s.narrationNames || '';
-                document.getElementById('hideDuplicateNames').checked = !!s.hideDuplicateNames;
-                document.getElementById('showDivider').checked = !!s.showDivider;
-                document.getElementById('showDiceResults').checked = !!s.showDiceResults;
-                document.getElementById('cardViewToggle').checked = !!s.cardViewToggle;
-                document.getElementById('bgColorPicker').value = s.bgColor || '#ffffff';
-                document.getElementById('textColorPicker').value = s.textColor || '#222222';
-                document.getElementById('fontSizeSlider').value = s.fontSize || '15';
-                document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
-                
-                updateStyles();
-                if (s.cardViewToggle) {
-                    document.getElementById('tistoryPreview').classList.add('card-view');
-                }
-            }
-
-            // 파일 정보 UI 복구
-            const fileInfo = document.getElementById('loadedFileInfo');
-            fileInfo.style.display = 'block';
-            fileInfo.textContent = `📄 복구된 파일: ${loadedFileName}`;
-
-            // 에디터 미리보기 복구
-            document.getElementById('tistoryPreview').innerHTML = parsed.previewHtml;
-            updateCharacterListUI();
-
-            // 히스토리 초기화
-            historyStack = [{
-                previewHtml: parsed.previewHtml,
-                logData: JSON.parse(JSON.stringify(logData)),
-                characterMap: JSON.parse(JSON.stringify(characterMap))
-            }];
-            historyIndex = 0;
-            updateUndoRedoButtons();
-
-            document.getElementById('restoreModal').style.display = 'none';
-        }
-
-        function clearSavedData() {
-            localStorage.removeItem(STORAGE_KEY);
-            document.getElementById('restoreModal').style.display = 'none';
-        }
-
-        function saveStateDebounced() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                saveState();
-            }, 500);
-        }
-
         function saveState() {
-            const previewEl = document.getElementById('tistoryPreview');
             const currentState = {
-                previewHtml: previewEl.innerHTML,
                 logData: JSON.parse(JSON.stringify(logData)),
-                characterMap: JSON.parse(JSON.stringify(characterMap))
+                characterMap: JSON.parse(JSON.stringify(characterMap)),
+                previewHtml: document.getElementById('tistoryPreview').innerHTML
             };
 
             historyStack = historyStack.slice(0, historyIndex + 1);
@@ -735,7 +1107,7 @@
             historyIndex++;
 
             updateUndoRedoButtons();
-            saveToLocalStorage(currentState);
+            saveToLocalStorage();
         }
 
         function undo() {
@@ -755,10 +1127,16 @@
         function restoreState(state) {
             logData = JSON.parse(JSON.stringify(state.logData));
             characterMap = JSON.parse(JSON.stringify(state.characterMap));
-            document.getElementById('tistoryPreview').innerHTML = state.previewHtml;
+            
+            if (state.previewHtml) {
+                document.getElementById('tistoryPreview').innerHTML = state.previewHtml;
+            } else {
+                renderLogs();
+            }
+
             updateCharacterListUI();
             updateUndoRedoButtons();
-            saveToLocalStorage(state);
+            saveToLocalStorage();
         }
 
         function updateUndoRedoButtons() {
@@ -813,6 +1191,11 @@
             const pTags = doc.querySelectorAll('p');
 
             pTags.forEach(p => {
+                const textCheck = p.textContent.trim();
+                if (textCheck === '판정 수행') {
+                    return;
+                }
+
                 const style = p.getAttribute('style') || '';
                 const colorMatch = style.match(/color\s*:\s*([^;]+)/);
                 const rawColor = colorMatch ? colorMatch[1].trim() : '#333333';
@@ -823,11 +1206,7 @@
                 if (spans.length >= 3) {
                     const tabName = spans[0].textContent.trim().replace('[', '').replace(']', '');
                     const name = spans[1].textContent.trim();
-                    
-                    let content = spans[2].innerHTML
-                        .replace(/<br\s*[\/]?>/gi, '\n')
-                        .replace(/<[^>]+>/g, '')
-                        .trim();
+                    const content = spans[2].textContent.trim();
 
                     const imgTag = p.querySelector('img');
                     const icon = imgTag ? imgTag.getAttribute('src') : '';
@@ -839,12 +1218,12 @@
                         };
                     }
 
-                    if (content.includes('CCB') || content.includes('＞') || content.includes('1D100') || content.includes('1d100')) {
+                    if (content.includes('CCB') || content.includes('＞') || content.includes('1D100') || content.includes('1d100') || content.includes('CC<=')) {
                         parsedLogs.push({
                             type: 'dice',
                             tab: tabName,
                             name: name,
-                            text: '판정 수행',
+                            text: '',
                             result: content
                         });
                     } else {
@@ -857,7 +1236,7 @@
                     }
                 } else {
                     const text = p.textContent.trim();
-                    if (text) {
+                    if (text && text !== '판정 수행') {
                         parsedLogs.push({
                             type: 'text',
                             text: text
@@ -929,6 +1308,42 @@
             saveState();
         }
 
+        window.moveLogUp = function(index) {
+            if (index > 0) {
+                const temp = logData[index];
+                logData[index] = logData[index - 1];
+                logData[index - 1] = temp;
+                applySettingsWithoutLoss();
+            }
+        };
+
+        window.moveLogDown = function(index) {
+            if (index < logData.length - 1) {
+                const temp = logData[index];
+                logData[index] = logData[index + 1];
+                logData[index + 1] = temp;
+                applySettingsWithoutLoss();
+            }
+        };
+
+        window.insertLogAfter = function(index) {
+            const newLog = {
+                type: 'text',
+                text: '새로운 대사 또는 나레이션을 입력하세요.'
+            };
+            logData.splice(index + 1, 0, newLog);
+            applySettingsWithoutLoss();
+        };
+
+        window.deleteLog = function(index) {
+            if (logData.length <= 1) {
+                alert('마지막 남은 로그는 삭제할 수 없습니다.');
+                return;
+            }
+            logData.splice(index, 1);
+            applySettingsWithoutLoss();
+        };
+
         function renderLogs() {
             const preview = document.getElementById('tistoryPreview');
             
@@ -936,7 +1351,7 @@
                 preview.innerHTML = `
                 <div class="empty-placeholder" contenteditable="false">
                     <div class="empty-icon">📖</div>
-                    <div class="empty-title">Olhi 미리보기 준비 중</div>
+                    <div class="empty-title">미리보기 준비 중</div>
                     <div class="empty-desc">
                         HTML 백업 로그 파일을 추가하면<br>
                         변환 결과를 미리 확인할 수 있습니다
@@ -947,7 +1362,6 @@
 
             const hideDuplicate = document.getElementById('hideDuplicateNames').checked;
             const showDivider = document.getElementById('showDivider').checked;
-            const showDice = document.getElementById('showDiceResults').checked;
             
             const narrationInput = document.getElementById('narrationNames').value;
             const narrationList = narrationInput
@@ -964,13 +1378,25 @@
 
             let html = '';
             let currentGroup = null;
+            let groupStartIndex = 0;
 
             logData.forEach((log, index) => {
+                if (log.type === 'dice') {
+                    if (currentGroup) {
+                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
+                        if (showDivider) html += `<hr class="sp-chat-divider">`;
+                        currentGroup = null;
+                    }
+                    html += wrapWithHandle(renderDiceOnly(log, index, logData), index);
+                    if (showDivider) html += `<hr class="sp-chat-divider">`;
+                    return;
+                }
+
                 const isNarration = checkIsNarration(log);
 
                 if (isNarration) {
                     if (currentGroup) {
-                        html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
                         if (showDivider) html += `<hr class="sp-chat-divider">`;
                         currentGroup = null;
                     }
@@ -984,14 +1410,17 @@
                     if (index === 0 || !prevIsNarration) sceneClasses.push('sp-scene-start');
                     if (index === logData.length - 1 || !nextIsNarration) sceneClasses.push('sp-scene-end');
 
-                    html += `
+                    const sceneHtml = `
                     <div class="${sceneClasses.join(' ')}">
                         <p data-ke-size="size16">${log.text}</p>
                     </div>`;
+
+                    html += wrapWithHandle(sceneHtml, index);
                 } else {
                     const charInfo = characterMap[log.name] || { color: '#333333', icon: '' };
                     
                     if (!currentGroup) {
+                        groupStartIndex = index;
                         currentGroup = {
                             name: log.name,
                             color: charInfo.color,
@@ -1001,9 +1430,10 @@
                         if (hideDuplicate && currentGroup.name === log.name) {
                             currentGroup.items.push(log);
                         } else {
-                            html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+                            html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
                             if (showDivider) html += `<hr class="sp-chat-divider">`;
                             
+                            groupStartIndex = index;
                             currentGroup = {
                                 name: log.name,
                                 color: charInfo.color,
@@ -1015,13 +1445,27 @@
             });
 
             if (currentGroup) {
-                html += renderChatGroup(currentGroup, hideDuplicate, showDice);
+                html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
             }
 
             preview.innerHTML = html;
         }
 
-        function renderChatGroup(group, hideDuplicate, showDice) {
+        function wrapWithHandle(contentHtml, index) {
+            const plusIconSvg = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+            return `
+            <div class="log-block-wrapper">
+                <div class="move-handle" contenteditable="false">
+                    <button onclick="insertLogAfter(${index})" title="아래에 대사 추가">${plusIconSvg}</button>
+                    <button onclick="deleteLog(${index})" title="이 블록 삭제">🗑️</button>
+                    <button onclick="moveLogUp(${index})" title="위로 이동">▲</button>
+                    <button onclick="moveLogDown(${index})" title="아래로 이동">▼</button>
+                </div>
+                ${contentHtml}
+            </div>`;
+        }
+
+        function renderChatGroup(group, hideDuplicate) {
             const charInfo = characterMap[group.name] || { icon: '', color: '#333333' };
             const iconSrc = charInfo.icon;
             const nameColor = charInfo.color;
@@ -1029,9 +1473,8 @@
             let groupBodyInner = `<div class="sp-chat-name" style="color:${nameColor}">${group.name || ''}</div>`;
 
             group.items.forEach(item => {
-                groupBodyInner += `<div class="sp-chat-text">${item.text || ''}</div>`;
-                if (item.result && showDice) {
-                    groupBodyInner += `<div class="sp-dice-result">🎲 ${item.result}</div>`;
+                if (item.text) {
+                    groupBodyInner += `<div class="sp-chat-text">${item.text}</div>`;
                 }
             });
 
@@ -1042,6 +1485,149 @@
                     ${groupBodyInner}
                 </div>
             </div>`;
+        }
+
+        function extractSkillName(diceLog) {
+            const resultText = diceLog.result || '';
+            
+            let match = resultText.match(/CC\s*<=\s*\d+\s+([^\(\[]+?)(?:\s*\(|\s*\[|$)/i);
+            if (match && match[1]) {
+                const name = match[1].trim();
+                if (name) return name;
+            }
+
+            let bracketMatch = resultText.match(/\[(.*?)\]/);
+            if (bracketMatch && bracketMatch[1]) {
+                return bracketMatch[1].trim();
+            }
+
+            if (diceLog.tab && diceLog.tab !== '메인' && diceLog.tab !== '로비') {
+                return diceLog.tab;
+            }
+
+            return '판정 결과';
+        }
+
+        function renderDiceOnly(diceLog, currentIndex, allLogs) {
+            const isPlain = document.getElementById('plainViewToggle').checked;
+            const isModern = document.getElementById('modernCardViewToggle').checked;
+            const isCard = document.getElementById('cardViewToggle').checked;
+            const skillName = extractSkillName(diceLog);
+
+            if (isPlain) {
+                return `
+                <div class="sp-dice-only-line">
+                    <div class="sp-dice-only-body">
+                        <div class="sp-dice-result">결과: ${diceLog.result}</div>
+                    </div>
+                </div>`;
+            } else if (isModern) {
+                return createModernDiceCardHtml(diceLog, skillName);
+            } else if (isCard) {
+                return `
+                <div class="sp-dice-only-line">
+                    <div class="sp-dice-only-body">
+                        <div class="sp-dice-result">${createDiceTableHtml(diceLog.result, skillName)}</div>
+                    </div>
+                </div>`;
+            } else {
+                return `
+                <div class="sp-dice-only-line">
+                    <div class="sp-dice-only-body">
+                        <div class="sp-dice-result">결과: ${diceLog.result}</div>
+                    </div>
+                </div>`;
+            }
+        }
+
+        function createDiceTableHtml(resultText, skillName) {
+            return `
+            <table class="dice-card-table">
+                <thead>
+                    <tr>
+                        <th>${skillName}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>결과:</b> ${resultText}</td>
+                    </tr>
+                </tbody>
+            </table>`;
+        }
+
+        /* 티스토리 완벽 호환을 위해 <details>와 <summary> 구조로 변경 */
+        function createModernDiceCardHtml(diceLog, skillName) {
+            const rawResult = diceLog.result || '';
+            const charName = diceLog.name || '알 수 없음';
+            
+            let resultStatus = '결과 확인';
+            let statusColor = '#2e7d32';
+
+            const lower = rawResult.toLowerCase();
+            if (lower.includes('대성공') || lower.includes('결정적')) {
+                resultStatus = '대성공';
+                statusColor = '#d97706';
+            } else if (lower.includes('대실패') || lower.includes('참사')) {
+                resultStatus = '대실패';
+                statusColor = '#dc2626';
+            } else if (lower.includes('성공')) {
+                if (lower.includes('극단적')) {
+                    resultStatus = '극단적 성공';
+                } else if (lower.includes('단단한') || lower.includes('어려운')) {
+                    resultStatus = '어려운 성공';
+                } else {
+                    resultStatus = '보통 성공';
+                }
+                statusColor = '#16a34a';
+            } else if (lower.includes('실패')) {
+                resultStatus = '실패';
+                statusColor = '#64748b';
+            } else {
+                const parts = rawResult.split('＞').map(s => s.trim());
+                if (parts.length > 1) {
+                    resultStatus = parts[parts.length - 1];
+                }
+            }
+
+            const badgeText = skillName;
+
+            let summarizedDesc = rawResult;
+            let diceCondMatch = rawResult.match(/(1d\d+\s*<=\s*\d+)/i);
+            let numbers = rawResult.match(/\b\d+\b/g);
+            
+            if (diceCondMatch) {
+                let finalVal = '';
+                if (numbers && numbers.length > 0) {
+                    finalVal = numbers[numbers.length - 1];
+                }
+                summarizedDesc = `${skillName}(${diceCondMatch[1]}) ${finalVal}`.trim();
+            } else if (numbers && numbers.length > 0) {
+                let finalVal = numbers[numbers.length - 1];
+                summarizedDesc = `${skillName} ${finalVal}`;
+            }
+
+            return `
+            <div class="sp-dice-only-line">
+                <div class="sp-dice-only-body">
+                    <div class="sp-dice-result">
+                        <details class="modern-details-toggle">
+                            <summary>
+                                <span class="modern-dice-badge">${badgeText}</span>
+                            </summary>
+                            <div class="modern-dice-card">
+                                <div class="modern-dice-col modern-col-name">${charName}</div>
+                                <div class="modern-dice-col modern-col-result" style="color: ${statusColor};">${resultStatus}</div>
+                                <div class="modern-dice-col modern-col-desc">${summarizedDesc}</div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function syncEditableContent() {
+            saveState();
         }
 
         function updateStyles() {
@@ -1058,15 +1644,37 @@
             document.documentElement.style.setProperty('--preview-font-size', size + 'px');
             document.documentElement.style.setProperty('--scene-margin', margin + 'px');
 
-            saveStateDebounced();
+            saveState();
         }
 
-        // 새 파일 선택 시 이전 기록 초기화 후 로드
+        function updateModernCardStyle() {
+            const imgUrl = document.getElementById('modernCardImgInput').value.trim();
+            const bgColor = document.getElementById('modernCardBgPicker').value;
+            const borderColor = document.getElementById('modernCardBorderPicker').value;
+
+            document.documentElement.style.setProperty('--modern-card-bg', bgColor);
+            document.documentElement.style.setProperty('--modern-card-border', borderColor);
+            document.documentElement.style.setProperty('--modern-badge-bg', bgColor);
+            document.documentElement.style.setProperty('--modern-badge-border', borderColor);
+            document.documentElement.style.setProperty('--modern-badge-bg-image', imgUrl ? `url('${imgUrl}')` : 'none');
+
+            saveState();
+        }
+
+        function updateNormalResultStyle() {
+            const bgColor = document.getElementById('normalResultBgPicker').value;
+            const borderColor = document.getElementById('normalResultBorderPicker').value;
+
+            document.documentElement.style.setProperty('--normal-result-bg', bgColor);
+            document.documentElement.style.setProperty('--normal-result-border', borderColor);
+
+            saveState();
+        }
+
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // 기존 히스토리 및 자동저장 데이터 초기화
             localStorage.removeItem(STORAGE_KEY);
             historyStack = [];
             historyIndex = -1;
@@ -1080,9 +1688,205 @@
             reader.onload = function(e) {
                 const content = e.target.result;
                 logData = parseCcfoliaHtml(content);
-                applySettingsWithoutLoss();
+                renderLogs();
+                saveState();
             };
             reader.readAsText(file, 'UTF-8');
+        }
+
+        function insertImageToPreview() {
+            const urlInput = document.getElementById('bodyImageUrlInput');
+            const url = urlInput.value.trim();
+            if (!url) {
+                alert('삽입할 이미지의 URL 주소를 입력해주세요.');
+                return;
+            }
+
+            const selection = window.getSelection();
+            const previewArea = document.getElementById('tistoryPreview');
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.width = '100%';
+
+            if (selection.rangeCount > 0 && previewArea.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+                const range = selection.getRangeAt(0);
+                range.insertNode(img);
+            } else {
+                previewArea.appendChild(img);
+            }
+
+            urlInput.value = '';
+            saveState();
+        }
+
+        function closeImageMenuModal() {
+            document.getElementById('imageMenuModal').style.display = 'none';
+            selectedImgElement = null;
+        }
+
+        function deleteSelectedImage() {
+            if (selectedImgElement && confirm('이 이미지를 삭제하시겠습니까?')) {
+                selectedImgElement.remove();
+                closeImageMenuModal();
+                saveState();
+            }
+        }
+
+        function applyInlineStyle(formatClass, styleProperties) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) {
+                alert('효과를 적용할 텍스트를 드래그하여 선택해주세요.');
+                return;
+            }
+
+            const range = selection.getRangeAt(0);
+            const previewArea = document.getElementById('tistoryPreview');
+            if (!previewArea.contains(range.commonAncestorContainer)) {
+                alert('미리보기 영역 내부의 텍스트만 수정할 수 있습니다.');
+                return;
+            }
+
+            const startContainer = range.startContainer;
+            const endContainer = range.endContainer;
+            const startOffset = range.startOffset;
+            const endOffset = range.endOffset;
+
+            const walker = document.createTreeWalker(previewArea, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    try {
+                        if (range.intersectsNode(node)) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    } catch (e) {}
+                    return NodeFilter.FILTER_SKIP;
+                }
+            });
+
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+
+            if (textNodes.length === 0) return;
+
+            textNodes.forEach((textNode) => {
+                let sOffset = 0;
+                let eOffset = textNode.length;
+
+                if (textNode === startContainer) sOffset = startOffset;
+                if (textNode === endContainer) eOffset = endOffset;
+
+                if (sOffset >= eOffset) return;
+
+                const targetRange = document.createRange();
+                targetRange.setStart(textNode, sOffset);
+                targetRange.setEnd(textNode, eOffset);
+
+                const existingSpan = textNode.parentElement.closest('span');
+                const combinedStyles = {};
+
+                if (existingSpan) {
+                    if (existingSpan.style.color) combinedStyles.color = existingSpan.style.color;
+                    if (existingSpan.style.backgroundColor) combinedStyles.backgroundColor = existingSpan.style.backgroundColor;
+                    if (existingSpan.style.fontWeight) combinedStyles.fontWeight = existingSpan.style.fontWeight;
+                    if (existingSpan.style.fontStyle) combinedStyles.fontStyle = existingSpan.style.fontStyle;
+                    if (existingSpan.style.textDecoration) combinedStyles.textDecoration = existingSpan.style.textDecoration;
+                }
+
+                for (const [key, value] of Object.entries(styleProperties)) {
+                    combinedStyles[key] = value;
+                }
+
+                const span = document.createElement('span');
+                if (formatClass) span.className = formatClass;
+                for (const [key, value] of Object.entries(combinedStyles)) {
+                    span.style[key] = value;
+                }
+
+                try {
+                    span.appendChild(targetRange.extractContents());
+                    targetRange.insertNode(span);
+                } catch (e) {}
+            });
+
+            previewArea.normalize();
+            selection.removeAllRanges();
+            saveState();
+        }
+
+        function applyTextTransparentBg() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) {
+                alert('형광펜 효과를 지울 텍스트를 드래그하여 선택해주세요.');
+                return;
+            }
+
+            const range = selection.getRangeAt(0);
+            const previewArea = document.getElementById('tistoryPreview');
+            if (!previewArea.contains(range.commonAncestorContainer)) {
+                alert('미리보기 영역 내부의 텍스트만 수정할 수 있습니다.');
+                return;
+            }
+
+            const walker = document.createTreeWalker(previewArea, NodeFilter.SHOW_ELEMENT, {
+                acceptNode: function(node) {
+                    if (node === previewArea) return NodeFilter.FILTER_SKIP;
+                    try {
+                        if (range.intersectsNode(node)) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    } catch (e) {}
+                    return NodeFilter.FILTER_SKIP;
+                }
+            });
+
+            const nodesToProcess = [];
+            let node;
+            while (node = walker.nextNode()) {
+                nodesToProcess.push(node);
+            }
+
+            nodesToProcess.forEach(el => {
+                if (el.style && el.style.backgroundColor) {
+                    el.style.backgroundColor = '';
+                    if (el.classList) el.classList.remove('trpg-highlighter');
+                    
+                    if (!el.getAttribute('style') || el.style.cssText.trim() === '') {
+                        const parent = el.parentNode;
+                        while (el.firstChild) {
+                            parent.insertBefore(el.firstChild, el);
+                        }
+                        parent.removeChild(el);
+                    }
+                }
+            });
+
+            previewArea.normalize();
+            saveState();
+        }
+
+        function applyTextFormat(type) {
+            if (type === 'bold') {
+                applyInlineStyle('trpg-bold', { fontWeight: 'bold' });
+            } else if (type === 'italic') {
+                applyInlineStyle('trpg-italic', { fontStyle: 'italic' });
+            } else if (type === 'underline') {
+                applyInlineStyle('trpg-underline', { textDecoration: 'underline' });
+            } else if (type === 'strike') {
+                applyInlineStyle('trpg-strike', { textDecoration: 'line-through' });
+            }
+        }
+
+        function applyTextColor() {
+            const colorValue = document.getElementById('selectedTextColorPicker').value;
+            applyInlineStyle('trpg-color', { color: colorValue });
+        }
+
+        function applyTextBg() {
+            const colorValue = document.getElementById('selectedTextBgPicker').value;
+            applyInlineStyle('trpg-highlighter', { backgroundColor: colorValue });
         }
 
         function copyTistoryCode() {
@@ -1094,108 +1898,326 @@
             const textColor = document.getElementById('textColorPicker').value;
             const fontSize = document.getElementById('fontSizeSlider').value + 'px';
             const sceneMargin = document.getElementById('sceneMarginSlider').value + 'px';
+            
+            const isPlain = document.getElementById('plainViewToggle').checked;
+            const isCard = document.getElementById('cardViewToggle').checked;
+            const isModern = document.getElementById('modernCardViewToggle').checked;
+
+            const modernCardImg = document.getElementById('modernCardImgInput').value.trim();
+            const modernCardBg = document.getElementById('modernCardBgPicker').value;
+            const modernCardBorder = document.getElementById('modernCardBorderPicker').value;
+            const normalResultBg = document.getElementById('normalResultBgPicker').value;
+            const normalResultBorder = document.getElementById('normalResultBorderPicker').value;
+
+            const modernBadgeBgStyle = modernCardImg ? `${modernCardBg} url('${modernCardImg}') center/cover no-repeat !important` : `${modernCardBg} !important`;
+
+            let diceResultCss = '';
+            if (isPlain) {
+                diceResultCss = `
+  #trpg-log-container .sp-dice-result {
+      display: block !important;
+      background: ${normalResultBg} !important;
+      border: 1px solid ${normalResultBorder} !important;
+      padding: 8px 12px !important;
+      border-radius: 6px !important;
+      color: inherit !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      font-family: 'Pretendard', sans-serif !important;
+      text-align: center !important;
+      font-size: 0.9em !important;
+  }`;
+            } else if (isCard) {
+                diceResultCss = `
+  #trpg-log-container .sp-dice-result {
+      display: block !important;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      color: inherit !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      overflow: hidden !important;
+      font-family: 'Pretendard', sans-serif !important;
+      text-align: center !important;
+  }
+  #trpg-log-container .dice-card-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      text-align: center !important;
+      font-size: 0.9em !important;
+  }
+  #trpg-log-container .dice-card-table th {
+      border: 1px solid #111 !important;
+      background-color: #000 !important;
+      color: #fff !important;
+      padding: 8px !important;
+      font-weight: 700 !important;
+  }
+  #trpg-log-container .dice-card-table td {
+      border: 1px solid #ddd !important;
+      padding: 8px !important;
+      background-color: #fff !important;
+      color: #222 !important;
+  }`;
+            } else if (isModern) {
+                diceResultCss = `
+  #trpg-log-container .sp-dice-result {
+      display: block !important;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      color: inherit !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      font-family: 'Pretendard', sans-serif !important;
+      text-align: center !important;
+  }
+  #trpg-log-container .modern-details-toggle {
+      display: block !important;
+      border: none !important;
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+  }
+  #trpg-log-container .modern-details-toggle summary {
+      list-style: none !important;
+      outline: none !important;
+      cursor: pointer !important;
+      display: flex !important;
+      justify-content: center !important;
+      margin-bottom: 12px !important;
+  }
+  #trpg-log-container .modern-details-toggle summary::-webkit-details-marker {
+      display: none !important;
+  }
+  #trpg-log-container .modern-dice-badge {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: ${modernBadgeBgStyle};
+      border: 1px solid ${modernCardBorder} !important;
+      padding: 12px 54px !important;
+      border-radius: 30px !important;
+      font-size: 0.94em !important;
+      font-weight: 700 !important;
+      color: #333 !important;
+  }
+  #trpg-log-container .modern-dice-card {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      background-color: ${modernCardBg} !important;
+      border: 1px solid ${modernCardBorder} !important;
+      border-radius: 12px !important;
+      padding: 14px 20px !important;
+  }
+  #trpg-log-container .modern-dice-col {
+      flex: 1 !important;
+      text-align: center !important;
+      font-size: 0.85em !important;
+      position: relative !important;
+  }
+  #trpg-log-container .modern-dice-col:not(:last-child):after {
+      content: '' !important;
+      position: absolute !important;
+      right: 0 !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 1px !important;
+      height: 18px !important;
+      background-color: #cbd5e1 !important;
+  }
+  #trpg-log-container .modern-col-name { font-weight: 700 !important; color: #222 !important; }
+  #trpg-log-container .modern-col-result { font-weight: 700 !important; }
+  #trpg-log-container .modern-col-desc { color: #555 !important; font-size: 0.85em !important; }`;
+            } else {
+                diceResultCss = `
+  #trpg-log-container .sp-dice-result {
+      display: block !important;
+      background: rgba(124, 93, 250, 0.1) !important;
+      color: var(--accent-color) !important;
+      padding: 4px 8px !important;
+      border-radius: 4px !important;
+      font-size: 0.85em !important;
+      font-family: monospace !important;
+      margin-top: 4px !important;
+      margin-bottom: 6px !important;
+  }`;
+            }
 
             const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: 36px !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
 <style>
-  .sp-scene-text, .sp-scene-text * {
+  #trpg-log-container .sp-scene-text, #trpg-log-container .sp-scene-text * {
       margin-top: 6px !important;
       margin-bottom: 6px !important;
       color: ${textColor} !important;
       font-size: ${fontSize} !important;
       line-height: 1.6 !important;
-      font-weight: 400;
+      font-weight: 400 !important;
       text-align: center !important;
       font-family: 'Pretendard', sans-serif !important;
   }
-  .sp-scene-start { margin-top: ${sceneMargin} !important; }
-  .sp-scene-end { margin-bottom: ${sceneMargin} !important; }
-  .sp-chat-line {
+  #trpg-log-container .sp-scene-start { margin-top: ${sceneMargin} !important; }
+  #trpg-log-container .sp-scene-end { margin-bottom: ${sceneMargin} !important; }
+  
+  #trpg-log-container .sp-chat-line {
       display: flex !important;
       flex-direction: row !important;
       gap: 12px !important;
       margin-bottom: 16px !important;
       align-items: flex-start !important;
   }
-  .sp-chat-icon {
+  #trpg-log-container .sp-chat-icon {
       width: 44px !important;
       height: 44px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
       max-width: 44px !important;
       max-height: 44px !important;
       border-radius: 50% !important;
       object-fit: cover !important;
       flex-shrink: 0 !important;
       display: block !important;
+      background-color: #eee !important;
   }
-  .sp-chat-body { flex: 1 !important; color: ${textColor} !important; font-size: ${fontSize} !important; }
-  .sp-chat-name {
+  #trpg-log-container .sp-chat-body { flex: 1 !important; color: ${textColor} !important; font-size: ${fontSize} !important; word-break: break-all !important; }
+  #trpg-log-container .sp-chat-name {
       font-weight: 700 !important;
       font-size: 0.95em !important;
       margin-bottom: 4px !important;
       font-family: 'Pretendard', sans-serif !important;
   }
-  .sp-chat-text {
-      font-weight: 400;
+  #trpg-log-container .sp-chat-text {
+      font-weight: 400 !important;
       line-height: 1.5 !important;
       word-break: break-all !important;
-      white-space: pre-wrap !important;
       font-family: 'Pretendard', sans-serif !important;
       margin-bottom: 6px !important;
   }
-  .sp-chat-text:last-child {
+  #trpg-log-container .sp-chat-text:last-child {
       margin-bottom: 0 !important;
   }
-  .sp-chat-text b, .sp-chat-text strong {
+  #trpg-log-container .sp-chat-text b, #trpg-log-container .sp-chat-text strong {
       font-weight: 700 !important;
   }
-  .sp-chat-divider {
+  #trpg-log-container .sp-chat-divider {
       height: 1px !important;
       background-color: #e8e8e8 !important;
       margin: 14px 0 16px 0 !important;
       border: none !important;
   }
-  .sp-dice-result {
-      display: inline-block !important;
-      background: rgba(124, 93, 250, 0.1) !important;
-      color: #7c5dfa !important;
-      padding: 4px 8px !important;
-      border-radius: 4px !important;
-      font-size: 0.85em !important;
-      margin-top: 4px !important;
-      margin-bottom: 6px !important;
+  #trpg-log-container .sp-dice-only-line {
+      display: flex !important;
+      justify-content: center !important;
+      margin: 16px 0 !important;
+      width: 100% !important;
+  }
+  #trpg-log-container .sp-dice-only-body {
+      width: 100% !important;
+      max-width: 580px !important;
+      text-align: center !important;
+  }
+${diceResultCss}
+
+  #trpg-log-container img {
+      max-width: 100% !important;
+      height: auto !important;
+      display: block !important;
+      margin: 12px auto !important;
+      border-radius: 6px !important;
+  }
+
+  #trpg-log-container .trpg-bold { font-weight: bold !important; }
+  #trpg-log-container .trpg-italic { font-style: italic !important; }
+  #trpg-log-container .trpg-underline { text-decoration: underline !important; }
+  #trpg-log-container .trpg-strike { text-decoration: line-through !important; }
+
+  @media (max-width: 768px) {
+      #trpg-log-container .sp-chat-line {
+          gap: 8px !important;
+          margin-bottom: 12px !important;
+      }
+      #trpg-log-container .sp-chat-icon {
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
+      }
+      #trpg-log-container .sp-chat-body {
+          font-size: 14px !important;
+      }
   }
 </style>
 `;
 
-            const previewHtml = document.getElementById('tistoryPreview').innerHTML;
-            const finalHtml = embeddedCss + previewHtml;
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = document.getElementById('tistoryPreview').innerHTML;
+            const handles = tempContainer.querySelectorAll('.move-handle');
+            handles.forEach(h => h.remove());
+
+            /* 티스토리 저장 시 스크립트 삭제에 영향을 받지 않는 순수 HTML 토글 완성 */
+            const finalHtml = embeddedCss + tempContainer.innerHTML + '</div>';
 
             navigator.clipboard.writeText(finalHtml).then(() => {
-                alert('티스토리에 붙여넣을 HTML 코드가 복사되었습니다!\n\n티스토리 글쓰기 우측 상단에서 [HTML 모드]로 변경 후 붙여넣어주세요.');
+                alert('티스토리에 완벽 호환되는 HTML 코드가 복사되었습니다!\n\n티스토리 글쓰기 우측 상단에서 [HTML 모드]로 변경 후 붙여넣어주세요.');
             }).catch(err => {
                 alert('복사 실패: ' + err);
             });
         }
 
-        function toggleCardView() {
-            const isCard = document.getElementById('cardViewToggle').checked;
-            const preview = document.getElementById('tistoryPreview');
-            if (isCard) {
-                preview.classList.add('card-view');
-            } else {
-                preview.classList.remove('card-view');
+        function togglePlainView() {
+            const isPlain = document.getElementById('plainViewToggle').checked;
+            if (isPlain) {
+                document.getElementById('cardViewToggle').checked = false;
+                document.getElementById('modernCardViewToggle').checked = false;
             }
+            updateCardViewClasses();
+            renderLogs();
             saveState();
         }
 
-        function toggleFormat(command) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) {
-                alert('서식을 적용하거나 해제할 텍스트를 드래그하여 선택해주세요.');
-                return;
+        function toggleCardView() {
+            const isCard = document.getElementById('cardViewToggle').checked;
+            if (isCard) {
+                document.getElementById('plainViewToggle').checked = false;
+                document.getElementById('modernCardViewToggle').checked = false;
             }
-
-            document.execCommand(command, false, null);
+            updateCardViewClasses();
+            renderLogs();
             saveState();
+        }
+
+        function toggleModernCardView() {
+            const isModern = document.getElementById('modernCardViewToggle').checked;
+            if (isModern) {
+                document.getElementById('plainViewToggle').checked = false;
+                document.getElementById('cardViewToggle').checked = false;
+            }
+            updateCardViewClasses();
+            renderLogs();
+            saveState();
+        }
+
+        function updateCardViewClasses() {
+            const isPlain = document.getElementById('plainViewToggle').checked;
+            const isCard = document.getElementById('cardViewToggle').checked;
+            const isModern = document.getElementById('modernCardViewToggle').checked;
+            const preview = document.getElementById('tistoryPreview');
+
+            preview.classList.remove('plain-view', 'card-view', 'modern-card-view');
+            if (isPlain) {
+                preview.classList.add('plain-view');
+            } else if (isModern) {
+                preview.classList.add('modern-card-view');
+            } else if (isCard) {
+                preview.classList.add('card-view');
+            }
         }
     </script>
 </body>
