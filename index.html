@@ -804,6 +804,7 @@
             <button class="btn" onclick="redo()" id="redoBtn" disabled title="다시 실행 (Ctrl+Y)">↪ 다시 실행</button>
             <span style="color: var(--border-color);">|</span>
             <button class="btn btn-primary" onclick="copyTistoryCode()">📋 티스토리 코드 복사</button>
+            <button class="btn" style="background-color: #2e7d32; border-color: #2e7d32; color: #fff; font-weight: 600;" onclick="saveConverterFile()">💾 변환기 파일 저장</button>
         </div>
     </header>
 
@@ -1230,6 +1231,7 @@
             logData = JSON.parse(JSON.stringify(state.logData));
             characterMap = JSON.parse(JSON.stringify(state.characterMap));
             
+            // 미리보기 직접 수정 내용이 유실되지 않도록 저장된 previewHtml을 그대로 복원
             if (state.previewHtml) {
                 document.getElementById('tistoryPreview').innerHTML = state.previewHtml;
             } else {
@@ -2365,6 +2367,20 @@ ${diceResultCss}
             }).catch(err => {
                 alert('복사 실패: ' + err);
             });
+        }
+
+        // 변환기 전체 프로그램 파일 저장 함수
+        function saveConverterFile() {
+            saveToLocalStorage();
+            const fullDocumentHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const blob = new Blob([fullDocumentHtml], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'TRPG_Log_Converter_Saved.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
         }
 
         function togglePlainView() {
