@@ -692,6 +692,78 @@
             border: none;
             margin: 14px 0 16px 0;
         }
+
+        /* 핸드아웃 토글 스타일 */
+        .handout-wrapper {
+            margin: 16px 0;
+            background-color: #f0f2f5;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 16px 20px;
+            color: #222222;
+        }
+
+        .handout-details summary {
+            list-style: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 1.05em;
+            color: #1e293b;
+            user-select: none;
+        }
+
+        .handout-details summary::-webkit-details-marker,
+        .handout-details summary::marker {
+            display: none !important;
+            content: "" !important;
+        }
+
+        .handout-arrow-prefix {
+            font-weight: bold;
+            color: #475569;
+            user-select: none;
+            margin-right: 2px;
+        }
+
+        .handout-title-input {
+            outline: none;
+            width: 100%;
+            display: inline-block;
+            min-height: 1.2em;
+            min-width: 50px;
+        }
+
+        /* 핸드아웃 제목 Placeholder */
+        .handout-title-input:is(:empty, :focus:empty)::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            font-weight: normal;
+            pointer-events: none;
+            display: inline-block;
+        }
+
+        .handout-body {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #334155;
+            outline: none;
+            min-height: 24px;
+        }
+
+        /* 핸드아웃 본문 Placeholder */
+        .handout-body:is(:empty, :focus:empty)::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            pointer-events: none;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -993,6 +1065,31 @@
                 if (e.target.tagName === 'IMG') {
                     selectedImgElement = e.target;
                     document.getElementById('imageMenuModal').style.display = 'flex';
+                }
+            });
+
+            /* 핸드아웃 백스페이스/삭제 시 요소가 전부 지워지는 문제 방지 */
+            previewEl.addEventListener('keydown', function(e) {
+                const target = e.target;
+                if (target.classList && (target.classList.contains('handout-title-input') || target.classList.contains('handout-body'))) {
+                    if (e.key === 'Backspace' || e.key === 'Delete') {
+                        if (target.textContent.trim() === '') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    }
+                }
+            });
+
+            previewEl.addEventListener('keyup', function(e) {
+                const summary = e.target.closest('summary');
+                if (summary) {
+                    let titleSpan = summary.querySelector('.handout-title-input');
+                    if (!titleSpan) {
+                        summary.innerHTML = '<span class="handout-arrow-prefix">↳ </span><span class="handout-title-input" contenteditable="true" data-placeholder="제목을 입력하세요."></span>';
+                        titleSpan = summary.querySelector('.handout-title-input');
+                        titleSpan.focus();
+                    }
                 }
             });
 
@@ -1335,6 +1432,16 @@
             applySettingsWithoutLoss();
         };
 
+        window.insertHandoutAfter = function(index) {
+            const newHandout = {
+                type: 'handout',
+                title: '',
+                text: ''
+            };
+            logData.splice(index + 1, 0, newHandout);
+            applySettingsWithoutLoss();
+        };
+
         window.deleteLog = function(index) {
             if (logData.length <= 1) {
                 alert('마지막 남은 로그는 삭제할 수 없습니다.');
@@ -1388,6 +1495,17 @@
                         currentGroup = null;
                     }
                     html += wrapWithHandle(renderDiceOnly(log, index, logData), index);
+                    if (showDivider) html += `<hr class="sp-chat-divider">`;
+                    return;
+                }
+
+                if (log.type === 'handout') {
+                    if (currentGroup) {
+                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
+                        if (showDivider) html += `<hr class="sp-chat-divider">`;
+                        currentGroup = null;
+                    }
+                    html += wrapWithHandle(renderHandout(log), index);
                     if (showDivider) html += `<hr class="sp-chat-divider">`;
                     return;
                 }
@@ -1457,11 +1575,25 @@
             <div class="log-block-wrapper">
                 <div class="move-handle" contenteditable="false">
                     <button onclick="insertLogAfter(${index})" title="아래에 대사 추가">${plusIconSvg}</button>
+                    <button onclick="insertHandoutAfter(${index})" title="아래에 핸드아웃 추가">📜</button>
                     <button onclick="deleteLog(${index})" title="이 블록 삭제">🗑️</button>
                     <button onclick="moveLogUp(${index})" title="위로 이동">▲</button>
                     <button onclick="moveLogDown(${index})" title="아래로 이동">▼</button>
                 </div>
                 ${contentHtml}
+            </div>`;
+        }
+
+        function renderHandout(handoutLog) {
+            return `
+            <div class="handout-wrapper">
+                <details class="handout-details" open>
+                    <summary>
+                        <span class="handout-arrow-prefix">↳ </span>
+                        <span class="handout-title-input" contenteditable="true" data-placeholder="제목을 입력하세요.">${handoutLog.title || ''}</span>
+                    </summary>
+                    <div class="handout-body" contenteditable="true" data-placeholder="--- 내용 ---">${handoutLog.text || ''}</div>
+                </details>
             </div>`;
         }
 
@@ -1556,7 +1688,6 @@
             </table>`;
         }
 
-        /* 티스토리 완벽 호환을 위해 <details>와 <summary> 구조로 변경 */
         function createModernDiceCardHtml(diceLog, skillName) {
             const rawResult = diceLog.result || '';
             const charName = diceLog.name || '알 수 없음';
@@ -2121,6 +2252,44 @@
       max-width: 580px !important;
       text-align: center !important;
   }
+  #trpg-log-container .handout-wrapper {
+      margin: 16px 0 !important;
+      background-color: #f0f2f5 !important;
+      border: 1px solid #d1d5db !important;
+      border-radius: 8px !important;
+      padding: 16px 20px !important;
+      color: #222222 !important;
+  }
+  #trpg-log-container .handout-details summary {
+      list-style: none !important;
+      outline: none !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      font-weight: bold !important;
+      font-size: 1.05em !important;
+      color: #1e293b !important;
+  }
+  #trpg-log-container .handout-details summary::-webkit-details-marker,
+  #trpg-log-container .handout-details summary::marker {
+      display: none !important;
+      content: "" !important;
+  }
+  #trpg-log-container .handout-arrow-prefix {
+      font-weight: bold !important;
+      color: #475569 !important;
+      user-select: none !important;
+      margin-right: 2px !important;
+  }
+  #trpg-log-container .handout-body {
+      margin-top: 14px !important;
+      padding-top: 12px !important;
+      border-top: 1px dashed #cbd5e1 !important;
+      font-size: 0.95em !important;
+      line-height: 1.6 !important;
+      color: #334155 !important;
+  }
 ${diceResultCss}
 
   #trpg-log-container img {
@@ -2161,7 +2330,6 @@ ${diceResultCss}
             const handles = tempContainer.querySelectorAll('.move-handle');
             handles.forEach(h => h.remove());
 
-            /* 티스토리 저장 시 스크립트 삭제에 영향을 받지 않는 순수 HTML 토글 완성 */
             const finalHtml = embeddedCss + tempContainer.innerHTML + '</div>';
 
             navigator.clipboard.writeText(finalHtml).then(() => {
