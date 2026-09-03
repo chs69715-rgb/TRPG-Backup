@@ -480,6 +480,11 @@
             background-color: #eee;
         }
 
+        .sp-chat-icon.transparent-icon {
+            background-color: transparent !important;
+            opacity: 0 !important;
+        }
+
         .sp-chat-body { flex: 1; }
 
         .sp-chat-name {
@@ -1311,7 +1316,8 @@
                     if (name && characterMap[name] === undefined) {
                         characterMap[name] = {
                             icon: icon || '',
-                            color: hexColor
+                            color: hexColor,
+                            transparent: false
                         };
                     }
 
@@ -1360,7 +1366,7 @@
                 const item = document.createElement('div');
                 item.className = 'char-item';
                 
-                const currentChar = characterMap[name] || { icon: '', color: '#333333' };
+                const currentChar = characterMap[name] || { icon: '', color: '#333333', transparent: false };
 
                 item.innerHTML = `
                     <div class="char-item-header">
@@ -1368,9 +1374,15 @@
                             <img class="char-avatar" id="avatar-${name}" src="${currentChar.icon}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'36\' height=\'36\'><circle cx=\'18\' cy=\'18\' r=\'18\' fill=\'%233a3a4d\'/></svg>'" />
                             <span class="char-name">${name}</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <label style="font-size: 0.75rem; color: #aaa;">이름 색상</label>
-                            <input type="color" id="color-input-${name}" class="color-input" value="${currentChar.color}" onchange="updateCharColor('${name}')">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="font-size: 0.78rem; color: #aaa; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <input type="checkbox" id="transparent-check-${name}" ${currentChar.transparent ? 'checked' : ''} onchange="toggleCharTransparent('${name}')">
+                                인장 숨기기(투명)
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <label style="font-size: 0.75rem; color: #aaa;">이름 색상</label>
+                                <input type="color" id="color-input-${name}" class="color-input" value="${currentChar.color}" onchange="updateCharColor('${name}')">
+                            </div>
                         </div>
                     </div>
                     <div class="url-input-wrap">
@@ -1380,6 +1392,14 @@
                 `;
                 container.appendChild(item);
             });
+        }
+
+        function toggleCharTransparent(name) {
+            const isChecked = document.getElementById(`transparent-check-${name}`).checked;
+            if (characterMap[name]) {
+                characterMap[name].transparent = isChecked;
+            }
+            applySettingsWithoutLoss();
         }
 
         function updateCharUrl(name) {
@@ -1535,7 +1555,7 @@
 
                     html += wrapWithHandle(sceneHtml, index);
                 } else {
-                    const charInfo = characterMap[log.name] || { color: '#333333', icon: '' };
+                    const charInfo = characterMap[log.name] || { color: '#333333', icon: '', transparent: false };
                     
                     if (!currentGroup) {
                         groupStartIndex = index;
@@ -1598,9 +1618,10 @@
         }
 
         function renderChatGroup(group, hideDuplicate) {
-            const charInfo = characterMap[group.name] || { icon: '', color: '#333333' };
+            const charInfo = characterMap[group.name] || { icon: '', color: '#333333', transparent: false };
             const iconSrc = charInfo.icon;
             const nameColor = charInfo.color;
+            const isTransparent = charInfo.transparent;
 
             let groupBodyInner = `<div class="sp-chat-name" style="color:${nameColor}">${group.name || ''}</div>`;
 
@@ -1610,9 +1631,12 @@
                 }
             });
 
+            const transparentClass = isTransparent ? ' transparent-icon' : '';
+            const transparentStyle = isTransparent ? ' opacity: 0 !important; background-color: transparent !important;' : '';
+
             return `
             <div class="sp-chat-line">
-                ${iconSrc ? `<img class="sp-chat-icon" src="${iconSrc}" alt="" />` : '<div class="sp-chat-icon"></div>'}
+                ${iconSrc ? `<img class="sp-chat-icon${transparentClass}" style="${transparentStyle}" src="${iconSrc}" alt="" />` : `<div class="sp-chat-icon${transparentClass}" style="${transparentStyle}"></div>`}
                 <div class="sp-chat-body">
                     ${groupBodyInner}
                 </div>
@@ -2214,6 +2238,10 @@
       flex-shrink: 0 !important;
       display: block !important;
       background-color: #eee !important;
+  }
+  #trpg-log-container .sp-chat-icon.transparent-icon {
+      background-color: transparent !important;
+      opacity: 0 !important;
   }
   #trpg-log-container .sp-chat-body { flex: 1 !important; color: ${textColor} !important; font-size: ${fontSize} !important; word-break: break-all !important; }
   #trpg-log-container .sp-chat-name {
