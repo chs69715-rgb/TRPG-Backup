@@ -1049,9 +1049,10 @@
             if (savedData) {
                 try {
                     const parsed = JSON.parse(savedData);
-                    if (parsed && parsed.logData && parsed.logData.length > 0) {
+                    if (parsed && ((parsed.logData && parsed.logData.length > 0) || parsed.previewHtml)) {
                         pendingSavedData = parsed;
-                        document.getElementById('resumeModal').style.display = 'flex';
+                        acceptSavedState();
+                        return;
                     }
                 } catch (e) {
                     console.warn('저장된 데이터 파싱 오류', e);
@@ -1138,9 +1139,11 @@
                     updateCardViewClasses();
                 }
 
-                const fileInfo = document.getElementById('loadedFileInfo');
-                fileInfo.style.display = 'block';
-                fileInfo.textContent = `📄 복구된 파일: ${loadedFileName}`;
+                if (loadedFileName) {
+                    const fileInfo = document.getElementById('loadedFileInfo');
+                    fileInfo.style.display = 'block';
+                    fileInfo.textContent = `📄 불러온 파일: ${loadedFileName}`;
+                }
 
                 updateCharacterListUI();
 
@@ -2369,10 +2372,42 @@ ${diceResultCss}
             });
         }
 
-        // 변환기 전체 프로그램 파일 저장 함수
+        // 변환기 전체 프로그램 파일 저장 함수 (수정본)
         function saveConverterFile() {
             saveToLocalStorage();
-            const fullDocumentHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+            const dataToSave = {
+                logData: logData,
+                characterMap: characterMap,
+                loadedFileName: loadedFileName,
+                previewHtml: document.getElementById('tistoryPreview').innerHTML,
+                settings: {
+                    narrationNames: document.getElementById('narrationNames').value,
+                    hideDuplicateNames: document.getElementById('hideDuplicateNames').checked,
+                    showDivider: document.getElementById('showDivider').checked,
+                    plainViewToggle: document.getElementById('plainViewToggle').checked,
+                    cardViewToggle: document.getElementById('cardViewToggle').checked,
+                    modernCardViewToggle: document.getElementById('modernCardViewToggle').checked,
+                    bgColor: document.getElementById('bgColorPicker').value,
+                    textColor: document.getElementById('textColorPicker').value,
+                    fontSize: document.getElementById('fontSizeSlider').value,
+                    sceneMargin: document.getElementById('sceneMarginSlider').value,
+                    modernCardImg: document.getElementById('modernCardImgInput').value,
+                    modernCardBg: document.getElementById('modernCardBgPicker').value,
+                    modernCardBorder: document.getElementById('modernCardBorderPicker').value,
+                    normalResultBg: document.getElementById('normalResultBgPicker').value,
+                    normalResultBorder: document.getElementById('normalResultBorderPicker').value
+                }
+            };
+
+            const docCopy = document.documentElement.cloneNode(true);
+            const scriptTag = docCopy.querySelector('script');
+            if (scriptTag) {
+                const initCode = `\nlocalStorage.setItem('${STORAGE_KEY}', JSON.stringify(${JSON.stringify(dataToSave)}));\n`;
+                scriptTag.textContent = initCode + scriptTag.textContent;
+            }
+
+            const fullDocumentHtml = '<!DOCTYPE html>\n' + docCopy.outerHTML;
             const blob = new Blob([fullDocumentHtml], { type: 'text/html;charset=utf-8' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
