@@ -20,6 +20,7 @@
             --preview-font-size: 15px;
             --scene-margin: 28px;
             --narration-gap: 16px;
+            --chat-gap: 14px;
 
             /* 모던 판정 카드 커스텀 변수 기본값 */
             --modern-card-bg: #f1f5f8;
@@ -451,11 +452,17 @@
         /* 블록 제어 바 - 위치 밀림 방지 강화 */
         .log-block-wrapper {
             position: relative;
-            margin-bottom: 16px;
+            margin-bottom: var(--chat-gap);
             contain: layout style;
             width: 100%;
             display: block;
             z-index: 1;
+        }
+        /* 같은 캐릭터의 연속 대사(연속 대사 이름 1회만 표시로 이어지는 줄)끼리는 항상 좁고
+           일정한 간격으로 붙여서 하나의 대화 묶음처럼 보이게 한다. 서로 다른 캐릭터/새 대사
+           사이의 간격은 위쪽 "캐릭터 대사 사이 간격"(--chat-gap) 슬라이더로 조절된다. */
+        .log-block-wrapper.chat-continue {
+            margin-bottom: 6px !important;
         }
         .log-block-wrapper:hover .move-handle {
             opacity: 1;
@@ -1123,6 +1130,12 @@
                             <input type="range" id="narrationGapSlider" min="0" max="50" value="16" oninput="updateStyles()">
                             <p style="font-size: 0.72rem; color: #888; margin-top: 2px;">캐릭터를 나레이션으로 지정했을 때, 나레이션 줄들이 연속될 때만 적용되는 줄 간격이에요. 대사 칸 간격에는 영향 없어요.</p>
                         </div>
+
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label>캐릭터 대사 사이 간격: <span id="chatGapVal">14px</span></label>
+                            <input type="range" id="chatGapSlider" min="0" max="50" value="14" oninput="updateStyles()">
+                            <p style="font-size: 0.72rem; color: #888; margin-top: 2px;">캐릭터 대사 칸(연속 대사 포함)끼리의 줄 간격이에요. 나레이션 간격에는 영향 없어요.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -1367,6 +1380,7 @@
                 document.getElementById('fontSizeSlider').value = s.fontSize || '15';
                 document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
                 document.getElementById('narrationGapSlider').value = s.narrationGap || '16';
+                document.getElementById('chatGapSlider').value = s.chatGap || '14';
 
                 if (s.modernCardImg !== undefined) document.getElementById('modernCardImgInput').value = s.modernCardImg;
                 if (s.modernCardBg !== undefined) document.getElementById('modernCardBgPicker').value = s.modernCardBg;
@@ -1684,6 +1698,161 @@
             saveState();
         }
 
+        /* ===== 삭제/이동/삽입을 "전체 다시 그리기" 없이 처리하기 =====
+           renderLogs()로 미리보기 전체를 다시 그리면, 대사 칸(.sp-chat-text) 등
+           logData가 추적하는 영역 "밖"에 사용자가 직접 넣은 내용(본문 이미지가 엉뚱한
+           위치에 삽입된 경우 등)은 전부 사라진다. 삭제/이동/삽입 버튼을 누를 때마다
+           이런 현상이 발생했던 게 바로 이 이유. 아래 함수들은 실제로 바뀌는 블록의
+           DOM만 옮기거나 새로 만들고, 나머지 블록의 실제 텍스트 내용(innerHTML)은
+           절대 다시 만들지 않는다 - 그래서 다른 줄에 넣어둔 이미지나 볼드체 등은
+           그대로 남아있는다. */
+
+        /* 블록 하나를 DOM상에서 바로 앞 블록보다 앞으로 옮긴다 (moveLogUp/Down 공용) */
+        function moveWrapperBefore(wrapperEl) {
+            let prev = wrapperEl.previousElementSibling;
+            while (prev && prev.tagName === 'HR') prev = prev.previousElementSibling;
+            if (!prev || !prev.classList.contains('log-block-wrapper')) return;
+            wrapperEl.parentNode.insertBefore(wrapperEl, prev);
+        }
+
+        /* 미리보기에 현재 남아있는 .log-block-wrapper들을 DOM 순서 그대로 0..N-1로
+           data-index를 다시 매기고, 각 블록의 조작 버튼(이동/삭제/+메뉴)에 박혀있는
+           인덱스도 최신 값으로 새로 만들어 끼워넣는다. 내용(contentHtml)에는 손대지 않는다. */
+        function reindexAllWrapperControls() {
+            const preview = document.getElementById('tistoryPreview');
+            if (!preview) return;
+            const wrappers = preview.querySelectorAll(':scope > .log-block-wrapper');
+            wrappers.forEach((wrapperEl, i) => {
+                wrapperEl.setAttribute('data-index', i);
+                const oldHandle = wrapperEl.querySelector(':scope > .move-handle');
+                if (oldHandle) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = buildMoveHandleHtml(i);
+                    oldHandle.replaceWith(temp.firstElementChild);
+                }
+            });
+        }
+
+        /* 나레이션 이어짐/캐릭터 대사 이어짐 클래스와 구분선(<hr>)만 logData 순서에 맞춰
+           다시 계산해서 적용한다. 대사/나레이션의 실제 글자 내용(innerHTML)은 건드리지
+           않는 게 원칙이지만, "연속 대사 이름 1회만 표시"로 인해 이 줄이 이름을 보여줘야
+           하는지/숨겨야 하는지가 삭제·이동·삽입으로 인해 바뀌는 경우에는(예: 삭제로 인해
+           바로 위 줄과 같은 캐릭터가 되는 경우) 그 줄 하나에 한해서만 이름/인장 표시
+           틀을 새로 씌운다 - 이때도 원래 있던 텍스트(.sp-chat-text의 innerHTML)는
+           그대로 옮겨서 재사용한다. */
+        function refreshBlockStructure() {
+            const preview = document.getElementById('tistoryPreview');
+            if (!preview) return;
+
+            // 구분선은 내용이 없는 순수 장식 요소라서, 일단 다 지우고 새로 계산해서 넣는다
+            preview.querySelectorAll(':scope > hr.sp-chat-divider').forEach(hr => hr.remove());
+
+            const hideDuplicate = document.getElementById('hideDuplicateNames').checked;
+            const showDivider = document.getElementById('showDivider').checked;
+            const narrationInput = document.getElementById('narrationNames').value;
+            const narrationList = narrationInput.split(/[\/,]/).map(s => s.trim().toLowerCase()).filter(s => s);
+            const checkIsNarration = (logItem) => {
+                if (!logItem) return false;
+                if (logItem.type === 'text') return true;
+                if (logItem.name && narrationList.includes(logItem.name.toLowerCase())) return true;
+                return false;
+            };
+
+            logData.forEach((log, index) => {
+                const wrapper = preview.querySelector(`.log-block-wrapper[data-index="${index}"]`);
+                if (!wrapper) return;
+
+                wrapper.classList.remove('narration-continue', 'chat-continue');
+
+                if (log.type === 'dice' || log.type === 'handout') {
+                    if (showDivider && index < logData.length - 1) {
+                        wrapper.insertAdjacentHTML('afterend', '<hr class="sp-chat-divider">');
+                    }
+                    return;
+                }
+
+                const isNarration = checkIsNarration(log);
+                if (isNarration) {
+                    const prevLog = logData[index - 1];
+                    const nextLog = logData[index + 1];
+                    const prevIsNarration = checkIsNarration(prevLog);
+                    const nextIsNarration = checkIsNarration(nextLog);
+
+                    const sceneEl = wrapper.querySelector(':scope > .sp-scene-text');
+                    if (sceneEl) {
+                        sceneEl.classList.remove('sp-scene-start', 'sp-scene-end', 'sp-scene-continue');
+                        if (index === 0 || !prevIsNarration) sceneEl.classList.add('sp-scene-start');
+                        if (index === logData.length - 1 || !nextIsNarration) sceneEl.classList.add('sp-scene-end');
+                        if (nextIsNarration) sceneEl.classList.add('sp-scene-continue');
+                    }
+
+                    if (nextIsNarration) {
+                        wrapper.classList.add('narration-continue');
+                    } else if (showDivider && index < logData.length - 1) {
+                        wrapper.insertAdjacentHTML('afterend', '<hr class="sp-chat-divider">');
+                    }
+                } else {
+                    const prevLog = logData[index - 1];
+                    const nextLog = logData[index + 1];
+                    const isPrevSameChar = hideDuplicate && prevLog && prevLog.type === 'chat' && prevLog.name === log.name && !checkIsNarration(prevLog);
+                    const isNextSameChar = hideDuplicate && nextLog && nextLog.type === 'chat' && nextLog.name === log.name && !checkIsNarration(nextLog);
+
+                    const currentlyIsContinuation = !!wrapper.querySelector(':scope > .sp-chat-line.sp-chat-continuation');
+                    if (isPrevSameChar !== currentlyIsContinuation) {
+                        const textEl = wrapper.querySelector('.sp-chat-text');
+                        const currentText = textEl ? textEl.innerHTML : (log.text || '');
+                        const moveHandleEl = wrapper.querySelector(':scope > .move-handle');
+                        const newContentHtml = isPrevSameChar
+                            ? renderChatContinuation({ text: currentText })
+                            : renderChatGroup({ name: log.name, showName: true, items: [{ text: currentText }] });
+
+                        wrapper.innerHTML = '';
+                        if (moveHandleEl) wrapper.appendChild(moveHandleEl);
+                        wrapper.insertAdjacentHTML('beforeend', newContentHtml);
+                    }
+
+                    wrapper.classList.toggle('chat-continue', !!isNextSameChar);
+
+                    if (showDivider && index < logData.length - 1 && !isNextSameChar) {
+                        wrapper.insertAdjacentHTML('afterend', '<hr class="sp-chat-divider">');
+                    }
+                }
+            });
+        }
+
+        /* 새 블록(캐릭터 대사/나레이션/핸드아웃) 하나의 DOM을 만들어서, 예전 인덱싱 기준으로
+           afterOldIndex 블록 바로 뒤에 끼워넣는다. (구분선은 신경쓰지 않는다 - 바로 뒤에
+           refreshBlockStructure()가 전부 다시 계산해서 넣어준다) */
+        function insertBlockElementAfterOldIndex(afterOldIndex, newLog) {
+            const preview = document.getElementById('tistoryPreview');
+            let contentHtml;
+            if (newLog.type === 'handout') {
+                contentHtml = renderHandout(newLog);
+            } else if (newLog.type === 'text') {
+                contentHtml = `
+                <div class="sp-scene-text sp-scene-start sp-scene-end">
+                    <p data-ke-size="size16" data-placeholder="새로운 나레이션을 입력하세요.">${newLog.text || ''}</p>
+                </div>`;
+            } else {
+                contentHtml = renderChatGroup({ name: newLog.name, showName: true, items: [newLog] });
+            }
+            const wrapperHtml = wrapWithHandle(contentHtml, 0, '');
+            const temp = document.createElement('div');
+            temp.innerHTML = wrapperHtml.trim();
+            const newWrapperEl = temp.firstElementChild;
+
+            if (afterOldIndex < 0) {
+                preview.insertBefore(newWrapperEl, preview.firstChild);
+                return;
+            }
+            const refWrapper = preview.querySelector(`.log-block-wrapper[data-index="${afterOldIndex}"]`);
+            if (!refWrapper) {
+                preview.appendChild(newWrapperEl);
+                return;
+            }
+            refWrapper.insertAdjacentElement('afterend', newWrapperEl);
+        }
+
         window.moveLogUp = function(index, e) {
             if (e) e.stopPropagation();
             syncDomToLogData();
@@ -1691,7 +1860,13 @@
                 const temp = logData[index];
                 logData[index] = logData[index - 1];
                 logData[index - 1] = temp;
-                reRenderAndSave();
+
+                const preview = document.getElementById('tistoryPreview');
+                const wrapperEl = preview.querySelector(`.log-block-wrapper[data-index="${index}"]`);
+                if (wrapperEl) moveWrapperBefore(wrapperEl);
+                reindexAllWrapperControls();
+                refreshBlockStructure();
+                saveState();
             }
         };
 
@@ -1702,7 +1877,13 @@
                 const temp = logData[index];
                 logData[index] = logData[index + 1];
                 logData[index + 1] = temp;
-                reRenderAndSave();
+
+                const preview = document.getElementById('tistoryPreview');
+                const nextWrapperEl = preview.querySelector(`.log-block-wrapper[data-index="${index + 1}"]`);
+                if (nextWrapperEl) moveWrapperBefore(nextWrapperEl);
+                reindexAllWrapperControls();
+                refreshBlockStructure();
+                saveState();
             }
         };
 
@@ -1721,7 +1902,10 @@
                 text: ''
             };
             logData.splice(index + 1, 0, newLog);
-            reRenderAndSave();
+            insertBlockElementAfterOldIndex(index, newLog);
+            reindexAllWrapperControls();
+            refreshBlockStructure();
+            saveState();
         };
 
         window.insertNarrationLogAfter = function(index, e) {
@@ -1732,7 +1916,10 @@
                 text: ''
             };
             logData.splice(index + 1, 0, newLog);
-            reRenderAndSave();
+            insertBlockElementAfterOldIndex(index, newLog);
+            reindexAllWrapperControls();
+            refreshBlockStructure();
+            saveState();
         };
 
         window.insertHandoutAfter = function(index, e) {
@@ -1744,7 +1931,10 @@
                 text: ''
             };
             logData.splice(index + 1, 0, newHandout);
-            reRenderAndSave();
+            insertBlockElementAfterOldIndex(index, newHandout);
+            reindexAllWrapperControls();
+            refreshBlockStructure();
+            saveState();
         };
 
         window.deleteLog = function(index, e) {
@@ -1755,7 +1945,13 @@
                 return;
             }
             logData.splice(index, 1);
-            reRenderAndSave();
+
+            const preview = document.getElementById('tistoryPreview');
+            const wrapper = preview.querySelector(`.log-block-wrapper[data-index="${index}"]`);
+            if (wrapper) wrapper.remove();
+            reindexAllWrapperControls();
+            refreshBlockStructure();
+            saveState();
         };
 
         /* DOM 동기화 로직 */
@@ -1876,7 +2072,8 @@
                         };
                         lineHtml = renderChatGroup(singleGroup);
                     }
-                    html += wrapWithHandle(lineHtml, index);
+                    const chatWrapperExtraClass = isNextSameChar ? 'chat-continue' : '';
+                    html += wrapWithHandle(lineHtml, index, chatWrapperExtraClass);
                     if (showDivider && index < logData.length - 1 && !isNextSameChar) html += `<hr class="sp-chat-divider">`;
                 }
             });
@@ -1898,7 +2095,8 @@
             return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
-        function wrapWithHandle(contentHtml, index, extraClass) {
+        /* 이동 핸들(플러스 드롭다운/삭제/이동 버튼) 마크업만 따로 생성 - reindexAllWrapperControls에서 index만 바뀐 핸들을 교체할 때도 재사용 */
+        function buildMoveHandleHtml(index) {
             const plusIconSvg = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
 
             const charNames = Object.keys(characterMap);
@@ -1916,9 +2114,7 @@
                 charMenuHtml = `<button type="button" onclick="insertCharLogAfter(${index}, null, event)">🗣️ 캐릭터 대사</button>`;
             }
 
-            return `
-            <div class="log-block-wrapper${extraClass ? ' ' + extraClass : ''}" data-index="${index}">
-                <div class="move-handle" contenteditable="false">
+            return `<div class="move-handle" contenteditable="false">
                     <div class="add-dropdown-container">
                         <button type="button" title="아래에 블록 추가" onclick="toggleAddDropdown(this, event)">${plusIconSvg}</button>
                         <div class="add-dropdown-menu">
@@ -1930,7 +2126,13 @@
                     <button type="button" onclick="deleteLog(${index}, event)" title="이 블록 삭제">🗑️</button>
                     <button type="button" onclick="moveLogUp(${index}, event)" title="위로 이동">▲</button>
                     <button type="button" onclick="moveLogDown(${index}, event)" title="아래로 이동">▼</button>
-                </div>
+                </div>`;
+        }
+
+        function wrapWithHandle(contentHtml, index, extraClass) {
+            return `
+            <div class="log-block-wrapper${extraClass ? ' ' + extraClass : ''}" data-index="${index}">
+                ${buildMoveHandleHtml(index)}
                 ${contentHtml}
             </div>`;
         }
@@ -2181,16 +2383,19 @@
             const size = document.getElementById('fontSizeSlider').value;
             const margin = document.getElementById('sceneMarginSlider').value;
             const narrationGap = document.getElementById('narrationGapSlider').value;
+            const chatGap = document.getElementById('chatGapSlider').value;
 
             document.getElementById('fontSizeVal').textContent = size + 'px';
             document.getElementById('sceneMarginVal').textContent = margin + 'px';
             document.getElementById('narrationGapVal').textContent = narrationGap + 'px';
+            document.getElementById('chatGapVal').textContent = chatGap + 'px';
 
             document.documentElement.style.setProperty('--preview-bg', bg);
             document.documentElement.style.setProperty('--preview-text-color', text);
             document.documentElement.style.setProperty('--preview-font-size', size + 'px');
             document.documentElement.style.setProperty('--scene-margin', margin + 'px');
             document.documentElement.style.setProperty('--narration-gap', narrationGap + 'px');
+            document.documentElement.style.setProperty('--chat-gap', chatGap + 'px');
 
             saveState();
         }
@@ -2464,6 +2669,7 @@
             const fontSize = document.getElementById('fontSizeSlider').value + 'px';
             const sceneMargin = document.getElementById('sceneMarginSlider').value + 'px';
             const narrationGap = document.getElementById('narrationGapSlider').value + 'px';
+            const chatGap = document.getElementById('chatGapSlider').value + 'px';
 
             const isPlain = document.getElementById('plainViewToggle').checked;
             const isCard = document.getElementById('cardViewToggle').checked;
@@ -2640,8 +2846,12 @@
       display: flex !important;
       flex-direction: row !important;
       gap: 12px !important;
-      margin-bottom: 16px !important;
+      margin-bottom: ${chatGap} !important;
       align-items: flex-start !important;
+  }
+  /* 같은 캐릭터의 연속 대사끼리는 좁고 일정한 간격으로 붙여서 하나의 대화 묶음처럼 보이게 함 */
+  #trpg-log-container .log-block-wrapper.chat-continue .sp-chat-line {
+      margin-bottom: 6px !important;
   }
   #trpg-log-container .sp-chat-icon {
       width: 44px !important;
@@ -2804,6 +3014,7 @@ ${diceResultCss}
                     fontSize: document.getElementById('fontSizeSlider').value,
                     sceneMargin: document.getElementById('sceneMarginSlider').value,
                     narrationGap: document.getElementById('narrationGapSlider').value,
+                    chatGap: document.getElementById('chatGapSlider').value,
                     modernCardImg: document.getElementById('modernCardImgInput').value,
                     modernCardBg: document.getElementById('modernCardBgPicker').value,
                     modernCardBorder: document.getElementById('modernCardBorderPicker').value,
