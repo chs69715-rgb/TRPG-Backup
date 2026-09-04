@@ -1268,6 +1268,36 @@
                 }
             });
 
+            /* 미리보기에서 텍스트를 드래그해서 복사(Ctrl+C)할 때, 핸드아웃/판정 카드처럼
+               배경색이 있는 요소 안의 글이나 미리보기 기본 배경(흰색) 등 "배경색"이
+               다른 곳에 붙여넣을 때 같이 따라오지 않도록, 복사되는 내용에서
+               background 관련 스타일만 전부 제거해서 클립보드에 넣는다.
+               (글자색/굵기/밑줄 등 글자 자체의 서식은 그대로 유지됨) */
+            previewEl.addEventListener('copy', function(e) {
+                const selection = window.getSelection();
+                if (!selection.rangeCount || selection.isCollapsed) return;
+
+                const range = selection.getRangeAt(0);
+                if (!previewEl.contains(range.commonAncestorContainer)) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.appendChild(range.cloneContents());
+
+                const targets = [wrapper, ...wrapper.querySelectorAll('*')];
+                targets.forEach(el => {
+                    if (!el.style) return;
+                    el.style.removeProperty('background-color');
+                    el.style.removeProperty('background-image');
+                    el.style.removeProperty('background');
+                });
+
+                try {
+                    e.clipboardData.setData('text/plain', wrapper.textContent);
+                    e.clipboardData.setData('text/html', wrapper.innerHTML);
+                    e.preventDefault();
+                } catch (err) {}
+            });
+
             previewEl.addEventListener('keydown', function(e) {
                 const target = e.target;
                 if (target.classList && (target.classList.contains('handout-title-input') || target.classList.contains('handout-body'))) {
@@ -2538,6 +2568,12 @@
             }
         }
 
+        /* 드래그한 범위에 색상/배경색 등 인라인 스타일을 적용한다.
+           (예전에는 extractContents()로 뽑아낸 내용을 통째로 span 하나로 감쌌는데,
+           이 방식은 선택 범위가 여러 줄(여러 블록 요소)에 걸쳐 있으면 DOM 구조상
+           제대로 삽입되지 않아서 "여러 줄 드래그하면 색이 안 바뀌는" 문제가 있었음.
+           지금은 선택 범위와 겹치는 텍스트 노드를 하나씩 찾아서 각각 필요한 부분만
+           잘라내 개별 span으로 감싸는 방식이라, 몇 줄에 걸쳐 선택해도 전부 적용됨) */
         function applyInlineStyle(styleProperties) {
             const selection = window.getSelection();
             if (!selection.rangeCount || selection.isCollapsed) {
@@ -2552,20 +2588,52 @@
                 return false;
             }
 
-            const span = document.createElement('span');
-            for (const [key, value] of Object.entries(styleProperties)) {
-                span.style[key] = value;
-            }
+            // 나중에 DOM을 잘라내고 옮기면 range 자체의 경계가 같이 움직여버리므로(라이브 Range),
+            // 시작/끝 위치를 순수 값으로 미리 저장해둔다.
+            const startContainer = range.startContainer;
+            const startOffset = range.startOffset;
+            const endContainer = range.endContainer;
+            const endOffset = range.endOffset;
 
-            try {
-                span.appendChild(range.extractContents());
-                range.insertNode(span);
-            } catch (e) {}
+            const walker = document.createTreeWalker(previewArea, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    if (!node.nodeValue || !node.nodeValue.length) return NodeFilter.FILTER_REJECT;
+                    try {
+                        if (range.intersectsNode(node)) return NodeFilter.FILTER_ACCEPT;
+                    } catch (e) {}
+                    return NodeFilter.FILTER_REJECT;
+                }
+            });
+
+            const textNodes = [];
+            let n;
+            while (n = walker.nextNode()) textNodes.push(n);
+
+            let appliedAny = false;
+            textNodes.forEach(textNode => {
+                let start = 0;
+                let end = textNode.nodeValue.length;
+                if (textNode === startContainer) start = startOffset;
+                if (textNode === endContainer) end = endOffset;
+                if (start >= end) return;
+
+                let target = textNode;
+                if (start > 0) target = target.splitText(start);
+                if (end - start < target.nodeValue.length) target.splitText(end - start);
+
+                const span = document.createElement('span');
+                for (const [key, value] of Object.entries(styleProperties)) {
+                    span.style[key] = value;
+                }
+                target.parentNode.insertBefore(span, target);
+                span.appendChild(target);
+                appliedAny = true;
+            });
 
             previewArea.normalize();
             selection.removeAllRanges();
-            saveState();
-            return true;
+            if (appliedAny) saveState();
+            return appliedAny;
         }
 
         function applyTextTransparentBg() {
@@ -2823,10 +2891,19 @@
             const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: 36px !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
 <style>
-  #trpg-log-container .sp-scene-text, #trpg-log-container .sp-scene-text * {
+  #trpg-log-container .sp-scene-text {
       margin-top: 6px !important;
       margin-bottom: 6px !important;
       color: ${textColor} !important;
+      font-size: ${fontSize} !important;
+      line-height: 1.6 !important;
+      text-align: center !important;
+      font-family: 'Pretendard', sans-serif !important;
+  }
+  /* color는 여기서 빼서 하위 요소에 강제 적용되지 않게 함 - 안 그러면 나레이션 안에서
+     직접 바꾼 글자색(인라인 style)이 이 !important에 밀려서 티스토리에 붙여넣었을 때
+     적용이 안 되는 문제가 있었음. font-size/line-height 등 나머지 서식만 그대로 물려줌 */
+  #trpg-log-container .sp-scene-text * {
       font-size: ${fontSize} !important;
       line-height: 1.6 !important;
       text-align: center !important;
