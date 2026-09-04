@@ -19,6 +19,7 @@
             --preview-text-color: #222222;
             --preview-font-size: 15px;
             --scene-margin: 28px;
+            --content-padding: 36px;
 
             /* 모던 판정 카드 커스텀 변수 기본값 */
             --modern-card-bg: #f1f5f8;
@@ -348,7 +349,7 @@
             color: var(--preview-text-color);
             font-size: var(--preview-font-size);
             font-family: 'Pretendard', sans-serif;
-            padding: 36px;
+            padding: var(--content-padding);
             border-radius: 8px;
             min-height: 100%;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -356,14 +357,18 @@
             user-select: text;
         }
 
-        .tistory-preview b, 
-        .tistory-preview strong, 
-        .tistory-preview span[style*="font-weight: bold"], 
+        .tistory-preview b,
+        .tistory-preview strong,
+        .tistory-preview span[style*="font-weight: bold"],
         .tistory-preview span[style*="font-weight:700"] {
             font-weight: 700 !important;
         }
 
-        .tistory-preview img {
+        /* :not(.sp-chat-icon) - 캐릭터 인장(아바타)은 본문에 삽입한 이미지와 달리
+           크기가 항상 44px로 고정되어야 함. 이 규칙이 인장에도 걸리면 height:auto와
+           margin:12px가 인장 이미지에 적용되어, 인장이 있는 캐릭터와 없는 캐릭터의
+           줄 간격이 서로 달라지는 문제가 있었음 */
+        .tistory-preview img:not(.sp-chat-icon) {
             max-width: 100%;
             height: auto;
             display: inline-block;
@@ -374,7 +379,7 @@
             overflow: auto;
             vertical-align: middle;
         }
-        .tistory-preview img:hover {
+        .tistory-preview img:not(.sp-chat-icon):hover {
             outline: 2px dashed var(--accent-color);
         }
 
@@ -417,14 +422,22 @@
         .modal-desc { font-size: 0.9rem; color: #aaa; margin-bottom: 20px; line-height: 1.4; }
         .modal-btns { display: flex; gap: 10px; justify-content: center; }
 
-        /* 블록 제어 바 */
+        /* 블록 제어 바 - 위치 밀림 방지 강화 */
         .log-block-wrapper {
             position: relative;
             margin-bottom: 16px;
+            contain: layout style;
+            width: 100%;
+            display: block;
+            z-index: 1;
         }
         .log-block-wrapper:hover .move-handle {
             opacity: 1;
             pointer-events: auto;
+        }
+        /* 드롭다운이 열려있는 블록은 아래쪽 블록들 위로 확실히 떠오르게 함 (겹침으로 인한 오클릭 방지) */
+        .log-block-wrapper.dropdown-open {
+            z-index: 500;
         }
 
         .move-handle {
@@ -440,8 +453,13 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s;
-            z-index: 20;
+            z-index: 50;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        /* 드롭다운이 열려있는 동안은 호버 상태와 무관하게 핸들을 계속 보이게/클릭 가능하게 유지 */
+        .move-handle.force-visible {
+            opacity: 1 !important;
+            pointer-events: auto !important;
         }
         .move-handle button {
             background: none;
@@ -467,13 +485,15 @@
             background: rgba(0, 0, 0, 0.3);
         }
 
-        /* 드롭다운 메뉴 및 캐릭터 서브메뉴 CSS 수정 */
+        /* 단일화된 드롭다운 메뉴 CSS (이벤트 간섭 및 클릭 문제 수정) */
         .add-dropdown-container {
             position: relative;
             display: inline-block;
         }
         .add-dropdown-menu {
-            display: none;
+            display: flex;
+            opacity: 0;
+            pointer-events: none;
             position: absolute;
             top: 100%;
             right: 0;
@@ -481,51 +501,86 @@
             background-color: #2c2c3d;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 30;
-            min-width: 140px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            z-index: 100;
+            min-width: 130px;
             flex-direction: column;
+            /* overflow:hidden 이었으나, 캐릭터 선택 서브메뉴가 이 박스 밖으로
+               튀어나와야 해서 visible로 변경 (안 그러면 서브메뉴가 잘려서 안 보임) */
             overflow: visible;
+            transition: opacity 0.15s ease;
         }
-        .add-dropdown-menu button, .menu-item-has-sub {
+        .add-dropdown-menu button {
             width: 100%;
             height: auto;
-            padding: 8px 10px;
+            padding: 8px 12px;
             text-align: left;
             font-size: 0.8rem;
             color: #fff;
-            justify-content: flex-start;
             border-radius: 0;
             cursor: pointer;
-            position: relative;
             white-space: nowrap;
+            display: block;
         }
-        .add-dropdown-menu button:hover, .menu-item-has-sub:hover {
+        .add-dropdown-menu button:hover {
             background-color: var(--accent-hover);
         }
-        .add-dropdown-container:hover .add-dropdown-menu {
-            display: flex;
+        /* 클릭으로 여닫는 방식(.open 클래스)으로 전환 - 호버 방식은 인접 블록과 겹쳐서
+           드롭다운이 사라지거나 다른 블록이 클릭되는 문제가 있어 제거함 */
+        .add-dropdown-menu.open {
+            opacity: 1;
+            pointer-events: auto;
         }
 
-        /* 서브 캐릭터 메뉴 추가 */
-        .sub-char-menu {
-            display: none;
+        /* '캐릭터 대사' 클릭 시 나오는 캐릭터 선택 서브메뉴 */
+        .add-dropdown-submenu-container {
+            position: relative;
+        }
+        .submenu-trigger {
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+        .submenu-arrow {
+            opacity: 0.6;
+            font-size: 0.75em;
+        }
+        .char-submenu {
+            display: flex;
+            flex-direction: column;
             position: absolute;
             top: 0;
             right: 100%;
-            left: auto;
+            margin-right: 2px;
             background-color: #2c2c3d;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 31;
-            min-width: 130px;
-            max-height: 200px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            z-index: 110;
+            min-width: 120px;
+            max-height: 240px;
             overflow-y: auto;
-            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
         }
-        .menu-item-has-sub:hover .sub-char-menu {
-            display: flex;
+        .char-submenu.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .char-submenu button {
+            width: 100%;
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 0.8rem;
+            color: #fff;
+            cursor: pointer;
+            white-space: nowrap;
+            display: block;
+        }
+        .char-submenu button:hover {
+            background-color: var(--accent-hover);
         }
 
         .sp-scene-text {
@@ -535,10 +590,19 @@
             line-height: 1.6;
             text-align: center;
             font-family: 'Pretendard', sans-serif;
+            width: 100%;
         }
 
         .sp-scene-text p {
             font-weight: 400;
+        }
+
+        .sp-scene-text p:is(:empty, :focus:empty)::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            font-weight: normal;
+            pointer-events: none;
+            display: inline-block;
         }
 
         .sp-scene-text b, 
@@ -555,6 +619,7 @@
             display: flex;
             gap: 12px;
             align-items: flex-start;
+            width: 100%;
         }
 
         .sp-chat-icon {
@@ -590,6 +655,14 @@
 
         .sp-chat-text:last-child {
             margin-bottom: 0;
+        }
+
+        .sp-chat-text:is(:empty, :focus:empty)::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+            font-weight: normal;
+            pointer-events: none;
+            display: inline-block;
         }
 
         .sp-chat-text b, 
@@ -794,6 +867,8 @@
             border-radius: 8px;
             padding: 16px 20px;
             color: #222222;
+            position: relative;
+            z-index: 1;
         }
 
         .handout-details summary {
@@ -1004,6 +1079,11 @@
                         <div class="input-group" style="margin-top: 10px;">
                             <label>나레이션 전후(시작/끝) 여백: <span id="sceneMarginVal">28px</span></label>
                             <input type="range" id="sceneMarginSlider" min="8" max="70" value="28" oninput="updateStyles()">
+                        </div>
+
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label>전체 여백(본문 상하좌우 패딩): <span id="contentPaddingVal">36px</span></label>
+                            <input type="range" id="contentPaddingSlider" min="0" max="80" value="36" oninput="updateStyles()">
                         </div>
                     </div>
                 </div>
@@ -1240,6 +1320,7 @@
                 document.getElementById('textColorPicker').value = s.textColor || '#222222';
                 document.getElementById('fontSizeSlider').value = s.fontSize || '15';
                 document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
+                document.getElementById('contentPaddingSlider').value = s.contentPadding || '36';
 
                 if (s.modernCardImg !== undefined) document.getElementById('modernCardImgInput').value = s.modernCardImg;
                 if (s.modernCardBg !== undefined) document.getElementById('modernCardBgPicker').value = s.modernCardBg;
@@ -1472,11 +1553,6 @@
             });
         }
 
-        /* -------------------------------------------------------------
-           [핵심 수정 영역]
-           미리보기 렌더링을 완전히 리셋(renderLogs)하지 않고,
-           DOM 요소만 직접 찾아 수정하여 사용자의 편집(형광펜, 이미지 등)을 유지
-        ------------------------------------------------------------- */
         function updateCharInPreviewDOM(name) {
             const preview = document.getElementById('tistoryPreview');
             if (!preview) return;
@@ -1553,50 +1629,68 @@
             saveState();
         }
 
-        window.moveLogUp = function(index) {
+        /* logData를 이미 직접 수정(splice/swap)한 "직후"에만 사용.
+           applySettingsWithoutLoss()와 달리 syncDomToLogData()를 다시 호출하지 않는다.
+           (재호출하면 아직 재렌더링 전이라 옛 DOM 내용을 새 logData 위치에 덮어써서
+           삽입/이동/삭제 시 대사가 엉키고 옆줄 내용이 섞이는 버그가 있었음) */
+        function reRenderAndSave() {
+            renderLogs();
+            saveState();
+        }
+
+        window.moveLogUp = function(index, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             if (index > 0) {
                 const temp = logData[index];
                 logData[index] = logData[index - 1];
                 logData[index - 1] = temp;
-                applySettingsWithoutLoss();
+                reRenderAndSave();
             }
         };
 
-        window.moveLogDown = function(index) {
+        window.moveLogDown = function(index, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             if (index < logData.length - 1) {
                 const temp = logData[index];
                 logData[index] = logData[index + 1];
                 logData[index + 1] = temp;
-                applySettingsWithoutLoss();
+                reRenderAndSave();
             }
         };
 
-        window.insertCharLogAfter = function(index, targetCharName) {
+        /* name을 지정하면 그 캐릭터로, null/생략 시(캐릭터가 하나도 없을 때) 첫 캐릭터 또는
+           '캐릭터'라는 임시 이름으로 새 대사줄을 만든다. 텍스트는 항상 빈 문자열로 두고
+           화면에는 CSS placeholder("대사를 입력하세요.")만 옅게 보여준다 - 실제 글자가
+           들어있는 게 아니라서 입력하는 순간 자동으로 사라진다. */
+        window.insertCharLogAfter = function(index, name, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             const charNames = Object.keys(characterMap);
-            const selectedName = targetCharName || (charNames.length > 0 ? charNames[0] : '캐릭터');
+            const selectedName = name || (charNames.length > 0 ? charNames[0] : '캐릭터');
             const newLog = {
                 type: 'chat',
                 name: selectedName,
-                text: '새로운 캐릭터 대사를 입력하세요.'
+                text: ''
             };
             logData.splice(index + 1, 0, newLog);
-            applySettingsWithoutLoss();
+            reRenderAndSave();
         };
 
-        window.insertNarrationLogAfter = function(index) {
+        window.insertNarrationLogAfter = function(index, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             const newLog = {
                 type: 'text',
-                text: '새로운 나레이션을 입력하세요.'
+                text: ''
             };
             logData.splice(index + 1, 0, newLog);
-            applySettingsWithoutLoss();
+            reRenderAndSave();
         };
 
-        window.insertHandoutAfter = function(index) {
+        window.insertHandoutAfter = function(index, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             const newHandout = {
                 type: 'handout',
@@ -1604,19 +1698,21 @@
                 text: ''
             };
             logData.splice(index + 1, 0, newHandout);
-            applySettingsWithoutLoss();
+            reRenderAndSave();
         };
 
-        window.deleteLog = function(index) {
+        window.deleteLog = function(index, e) {
+            if (e) e.stopPropagation();
             syncDomToLogData();
             if (logData.length <= 1) {
                 alert('마지막 남은 로그는 삭제할 수 없습니다.');
                 return;
             }
             logData.splice(index, 1);
-            applySettingsWithoutLoss();
+            reRenderAndSave();
         };
 
+        /* DOM 동기화 로직 */
         function syncDomToLogData() {
             const preview = document.getElementById('tistoryPreview');
             if (!preview) return;
@@ -1641,21 +1737,9 @@
                     if (titleInput) logItem.title = titleInput.innerHTML;
                     if (body) logItem.text = body.innerHTML;
                 } else if (logItem.type === 'chat') {
-                    const hideDuplicate = document.getElementById('hideDuplicateNames').checked;
-                    const textEls = wrapper.querySelectorAll('.sp-chat-text');
-                    
-                    if (hideDuplicate && textEls.length > 1) {
-                        textEls.forEach((textEl, tIdx) => {
-                            if (logData[index + tIdx] && logData[index + tIdx].type === 'chat') {
-                                logData[index + tIdx].text = textEl.innerHTML;
-                            }
-                        });
-                    } else {
-                        textEls.forEach((textEl, tIdx) => {
-                            if (logData[index + tIdx] && logData[index + tIdx].type === 'chat') {
-                                logData[index + tIdx].text = textEl.innerHTML;
-                            }
-                        });
+                    const textEl = wrapper.querySelector('.sp-chat-text');
+                    if (textEl) {
+                        logItem.text = textEl.innerHTML;
                     }
                 }
             });
@@ -1694,41 +1778,23 @@
             };
 
             let html = '';
-            let currentGroup = null;
-            let groupStartIndex = 0;
 
             logData.forEach((log, index) => {
                 if (log.type === 'dice') {
-                    if (currentGroup) {
-                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
-                        if (showDivider) html += `<hr class="sp-chat-divider">`;
-                        currentGroup = null;
-                    }
                     html += wrapWithHandle(renderDiceOnly(log, index, logData), index);
-                    if (showDivider) html += `<hr class="sp-chat-divider">`;
+                    if (showDivider && index < logData.length - 1) html += `<hr class="sp-chat-divider">`;
                     return;
                 }
 
                 if (log.type === 'handout') {
-                    if (currentGroup) {
-                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
-                        if (showDivider) html += `<hr class="sp-chat-divider">`;
-                        currentGroup = null;
-                    }
                     html += wrapWithHandle(renderHandout(log), index);
-                    if (showDivider) html += `<hr class="sp-chat-divider">`;
+                    if (showDivider && index < logData.length - 1) html += `<hr class="sp-chat-divider">`;
                     return;
                 }
 
                 const isNarration = checkIsNarration(log);
 
                 if (isNarration) {
-                    if (currentGroup) {
-                        html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
-                        if (showDivider) html += `<hr class="sp-chat-divider">`;
-                        currentGroup = null;
-                    }
-
                     const prevLog = logData[index - 1];
                     const nextLog = logData[index + 1];
                     const prevIsNarration = checkIsNarration(prevLog);
@@ -1740,82 +1806,132 @@
 
                     const sceneHtml = `
                     <div class="${sceneClasses.join(' ')}">
-                        <p data-ke-size="size16">${log.text}</p>
+                        <p data-ke-size="size16" data-placeholder="새로운 나레이션을 입력하세요.">${log.text}</p>
                     </div>`;
 
                     html += wrapWithHandle(sceneHtml, index);
                 } else {
-                    const charInfo = characterMap[log.name] || { color: '#333333', icon: '', transparent: false };
-                    
-                    if (!currentGroup) {
-                        groupStartIndex = index;
-                        currentGroup = {
+                    const prevLog = logData[index - 1];
+                    const nextLog = logData[index + 1];
+                    const isPrevSameChar = hideDuplicate && prevLog && prevLog.type === 'chat' && prevLog.name === log.name && !checkIsNarration(prevLog);
+                    const isNextSameChar = hideDuplicate && nextLog && nextLog.type === 'chat' && nextLog.name === log.name && !checkIsNarration(nextLog);
+
+                    let lineHtml;
+                    if (isPrevSameChar) {
+                        lineHtml = renderChatContinuation(log);
+                    } else {
+                        const singleGroup = {
                             name: log.name,
-                            color: charInfo.color,
+                            showName: true,
                             items: [log]
                         };
-                    } else {
-                        if (hideDuplicate && currentGroup.name === log.name) {
-                            currentGroup.items.push(log);
-                        } else {
-                            html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
-                            if (showDivider) html += `<hr class="sp-chat-divider">`;
-                            
-                            groupStartIndex = index;
-                            currentGroup = {
-                                name: log.name,
-                                color: charInfo.color,
-                                items: [log]
-                            };
-                        }
+                        lineHtml = renderChatGroup(singleGroup);
                     }
+                    html += wrapWithHandle(lineHtml, index);
+                    if (showDivider && index < logData.length - 1 && !isNextSameChar) html += `<hr class="sp-chat-divider">`;
                 }
             });
-
-            if (currentGroup) {
-                html += wrapWithHandle(renderChatGroup(currentGroup, hideDuplicate), groupStartIndex);
-            }
 
             preview.innerHTML = html;
         }
 
+        /* 단일화된 플러스(+) 메뉴 제어 핸들 생성 */
+        /* HTML 텍스트로 안전하게 표시하기 위한 이스케이프 */
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        /* onclick="...('${name}')" 안에 안전하게 넣기 위한 이스케이프 */
+        function escAttr(str) {
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
         function wrapWithHandle(contentHtml, index) {
             const plusIconSvg = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
-            
+
             const charNames = Object.keys(characterMap);
-            let charSubMenuItems = '';
+            let charMenuHtml;
             if (charNames.length > 0) {
-                charSubMenuItems = charNames.map(cName => {
-                    const safeName = cName.replace(/'/g, "\\'");
-                    return `<button onclick="insertCharLogAfter(${index}, '${safeName}')">🗣️ ${cName}</button>`;
-                }).join('');
+                const charButtons = charNames.map(name =>
+                    `<button type="button" onclick="insertCharLogAfter(${index}, '${escAttr(name)}', event)">${escHtml(name)}</button>`
+                ).join('');
+                charMenuHtml = `
+                        <div class="add-dropdown-submenu-container">
+                            <button type="button" class="submenu-trigger" onclick="toggleCharSubmenu(this, event)">🗣️ 캐릭터 대사 <span class="submenu-arrow">◂</span></button>
+                            <div class="char-submenu">${charButtons}</div>
+                        </div>`;
             } else {
-                charSubMenuItems = `<button onclick="insertCharLogAfter(${index})">🗣️ 캐릭터</button>`;
+                charMenuHtml = `<button type="button" onclick="insertCharLogAfter(${index}, null, event)">🗣️ 캐릭터 대사</button>`;
             }
 
             return `
             <div class="log-block-wrapper" data-index="${index}">
                 <div class="move-handle" contenteditable="false">
                     <div class="add-dropdown-container">
-                        <button title="아래에 블록 추가">${plusIconSvg}</button>
+                        <button type="button" title="아래에 블록 추가" onclick="toggleAddDropdown(this, event)">${plusIconSvg}</button>
                         <div class="add-dropdown-menu">
-                            <div class="menu-item-has-sub">
-                                🗣️ 캐릭터 대사 ▶
-                                <div class="sub-char-menu">
-                                    ${charSubMenuItems}
-                                </div>
-                            </div>
-                            <button onclick="insertNarrationLogAfter(${index})">📖 나레이션</button>
+                            ${charMenuHtml}
+                            <button type="button" onclick="insertNarrationLogAfter(${index}, event)">📖 나레이션</button>
+                            <button type="button" onclick="insertHandoutAfter(${index}, event)">📜 핸드아웃</button>
                         </div>
                     </div>
-                    <button onclick="insertHandoutAfter(${index})" title="아래에 핸드아웃 추가">📜</button>
-                    <button onclick="deleteLog(${index})" title="이 블록 삭제">🗑️</button>
-                    <button onclick="moveLogUp(${index})" title="위로 이동">▲</button>
-                    <button onclick="moveLogDown(${index})" title="아래로 이동">▼</button>
+                    <button type="button" onclick="deleteLog(${index}, event)" title="이 블록 삭제">🗑️</button>
+                    <button type="button" onclick="moveLogUp(${index}, event)" title="위로 이동">▲</button>
+                    <button type="button" onclick="moveLogDown(${index}, event)" title="아래로 이동">▼</button>
                 </div>
                 ${contentHtml}
             </div>`;
         }
+
+        /* '+' 드롭다운: 호버 대신 클릭으로 여닫음 (인접 블록과 겹쳐서 오작동하던 문제 수정) */
+        function toggleAddDropdown(btn, e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            const container = btn.closest('.add-dropdown-container');
+            if (!container) return;
+            const menu = container.querySelector('.add-dropdown-menu');
+            const wasOpen = menu && menu.classList.contains('open');
+
+            closeAllAddDropdowns();
+
+            if (!wasOpen && menu) {
+                menu.classList.add('open');
+                const wrapper = container.closest('.log-block-wrapper');
+                const handle = container.closest('.move-handle');
+                if (wrapper) wrapper.classList.add('dropdown-open');
+                if (handle) handle.classList.add('force-visible');
+            }
+        }
+
+        /* '🗣️ 캐릭터 대사' 안의 캐릭터 선택 서브메뉴 여닫기 */
+        function toggleCharSubmenu(btn, e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            const container = btn.closest('.add-dropdown-submenu-container');
+            if (!container) return;
+            const submenu = container.querySelector('.char-submenu');
+            const wasOpen = submenu && submenu.classList.contains('open');
+
+            document.querySelectorAll('.char-submenu.open').forEach(s => s.classList.remove('open'));
+
+            if (!wasOpen && submenu) {
+                submenu.classList.add('open');
+            }
+        }
+
+        function closeAllAddDropdowns() {
+            document.querySelectorAll('.add-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.char-submenu.open').forEach(s => s.classList.remove('open'));
+            document.querySelectorAll('.log-block-wrapper.dropdown-open').forEach(w => w.classList.remove('dropdown-open'));
+            document.querySelectorAll('.move-handle.force-visible').forEach(h => h.classList.remove('force-visible'));
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.add-dropdown-container')) {
+                closeAllAddDropdowns();
+            }
+        });
 
         function renderHandout(handoutLog) {
             return `
@@ -1830,16 +1946,19 @@
             </div>`;
         }
 
-        function renderChatGroup(group, hideDuplicate) {
+        function renderChatGroup(group) {
             const charInfo = characterMap[group.name] || { icon: '', color: '#333333', transparent: false };
             const iconSrc = charInfo.icon;
             const nameColor = charInfo.color;
             const isTransparent = charInfo.transparent;
 
-            let groupBodyInner = `<div class="sp-chat-name" style="color:${nameColor}">${group.name || ''}</div>`;
+            let groupBodyInner = '';
+            if (group.showName !== false) {
+                groupBodyInner += `<div class="sp-chat-name" style="color:${nameColor}">${group.name || ''}</div>`;
+            }
 
             group.items.forEach(item => {
-                groupBodyInner += `<div class="sp-chat-text">${item.text || ''}</div>`;
+                groupBodyInner += `<div class="sp-chat-text" data-placeholder="대사를 입력하세요.">${item.text || ''}</div>`;
             });
 
             const transparentClass = isTransparent ? ' transparent-icon' : '';
@@ -1850,6 +1969,17 @@
                 ${iconSrc ? `<img class="sp-chat-icon${transparentClass}" style="${transparentStyle}" src="${iconSrc}" alt="" />` : `<div class="sp-chat-icon${transparentClass}" style="${transparentStyle}"></div>`}
                 <div class="sp-chat-body">
                     ${groupBodyInner}
+                </div>
+            </div>`;
+        }
+
+        /* 연속 대사(같은 캐릭터) 병합용: 이름/인장 없이 텍스트만 이어서 출력 */
+        function renderChatContinuation(log) {
+            return `
+            <div class="sp-chat-line sp-chat-continuation">
+                <div class="sp-chat-icon" style="visibility:hidden;"></div>
+                <div class="sp-chat-body">
+                    <div class="sp-chat-text" data-placeholder="대사를 입력하세요.">${log.text || ''}</div>
                 </div>
             </div>`;
         }
@@ -2001,14 +2131,17 @@
             const text = document.getElementById('textColorPicker').value;
             const size = document.getElementById('fontSizeSlider').value;
             const margin = document.getElementById('sceneMarginSlider').value;
+            const contentPadding = document.getElementById('contentPaddingSlider').value;
 
             document.getElementById('fontSizeVal').textContent = size + 'px';
             document.getElementById('sceneMarginVal').textContent = margin + 'px';
+            document.getElementById('contentPaddingVal').textContent = contentPadding + 'px';
 
             document.documentElement.style.setProperty('--preview-bg', bg);
             document.documentElement.style.setProperty('--preview-text-color', text);
             document.documentElement.style.setProperty('--preview-font-size', size + 'px');
             document.documentElement.style.setProperty('--scene-margin', margin + 'px');
+            document.documentElement.style.setProperty('--content-padding', contentPadding + 'px');
 
             saveState();
         }
@@ -2251,7 +2384,8 @@
             const textColor = document.getElementById('textColorPicker').value;
             const fontSize = document.getElementById('fontSizeSlider').value + 'px';
             const sceneMargin = document.getElementById('sceneMarginSlider').value + 'px';
-            
+            const contentPadding = document.getElementById('contentPaddingSlider').value + 'px';
+
             const isPlain = document.getElementById('plainViewToggle').checked;
             const isCard = document.getElementById('cardViewToggle').checked;
             const isModern = document.getElementById('modernCardViewToggle').checked;
@@ -2402,7 +2536,7 @@
             }
 
             const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: 36px !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
+<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: ${contentPadding} !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
 <style>
   #trpg-log-container .sp-scene-text, #trpg-log-container .sp-scene-text * {
       margin-top: 6px !important;
@@ -2523,7 +2657,7 @@
   }
 ${diceResultCss}
 
-  #trpg-log-container img {
+  #trpg-log-container img:not(.sp-chat-icon) {
       max-width: 100% !important;
       height: auto !important;
       display: block !important;
@@ -2589,6 +2723,7 @@ ${diceResultCss}
                     textColor: document.getElementById('textColorPicker').value,
                     fontSize: document.getElementById('fontSizeSlider').value,
                     sceneMargin: document.getElementById('sceneMarginSlider').value,
+                    contentPadding: document.getElementById('contentPaddingSlider').value,
                     modernCardImg: document.getElementById('modernCardImgInput').value,
                     modernCardBg: document.getElementById('modernCardBgPicker').value,
                     modernCardBorder: document.getElementById('modernCardBorderPicker').value,
