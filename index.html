@@ -19,7 +19,7 @@
             --preview-text-color: #222222;
             --preview-font-size: 15px;
             --scene-margin: 28px;
-            --content-padding: 36px;
+            --narration-gap: 16px;
 
             /* 모던 판정 카드 커스텀 변수 기본값 */
             --modern-card-bg: #f1f5f8;
@@ -332,6 +332,32 @@
             background: none;
         }
 
+        /* 최근 사용한 글자 색상 스와치 - 파일을 새로 불러오거나 페이지를 새로고침하면
+           초기화됨(저장/영구보관 안 함) */
+        .recent-color-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: -2px;
+        }
+        .recent-color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.25);
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .recent-color-swatch:hover {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 1px;
+        }
+        .recent-color-empty {
+            font-size: 0.72rem;
+            color: #666;
+        }
+
         .preview-area {
             flex: 1;
             padding: 30px;
@@ -349,7 +375,7 @@
             color: var(--preview-text-color);
             font-size: var(--preview-font-size);
             font-family: 'Pretendard', sans-serif;
-            padding: var(--content-padding);
+            padding: 36px;
             border-radius: 8px;
             min-height: 100%;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -614,6 +640,16 @@
 
         .sp-scene-start { margin-top: var(--scene-margin) !important; }
         .sp-scene-end { margin-bottom: var(--scene-margin) !important; }
+
+        /* 나레이션 문단이 연속될 때(다음 줄도 나레이션일 때)만 적용되는 줄 간격.
+           캐릭터 대사 블록의 기본 여백(.log-block-wrapper margin-bottom)은 건드리지 않고,
+           나레이션끼리 이어질 때의 간격만 이 값으로 따로 조절한다. */
+        .log-block-wrapper.narration-continue {
+            margin-bottom: 0 !important;
+        }
+        .sp-scene-continue {
+            margin-bottom: var(--narration-gap) !important;
+        }
 
         .sp-chat-line {
             display: flex;
@@ -994,7 +1030,7 @@
                         <div class="toggle-option">
                             <span>연속 대사 이름 1회만 표시</span>
                             <label class="switch">
-                                <input type="checkbox" id="hideDuplicateNames" onchange="applySettingsWithoutLoss()">
+                                <input type="checkbox" id="hideDuplicateNames" checked onchange="applySettingsWithoutLoss()">
                                 <span class="slider"></span>
                             </label>
                         </div>
@@ -1036,6 +1072,7 @@
                                 <input type="color" id="selectedTextColorPicker" class="color-input" value="#7c5dfa">
                             </div>
                         </div>
+                        <div id="recentColorSwatches" class="recent-color-swatches"></div>
 
                         <div class="color-picker-row">
                             <label style="font-size: 0.85rem;">글자 배경(형광펜)</label>
@@ -1082,8 +1119,9 @@
                         </div>
 
                         <div class="input-group" style="margin-top: 10px;">
-                            <label>전체 여백(본문 상하좌우 패딩): <span id="contentPaddingVal">36px</span></label>
-                            <input type="range" id="contentPaddingSlider" min="0" max="80" value="36" oninput="updateStyles()">
+                            <label>나레이션 문단 사이 간격: <span id="narrationGapVal">16px</span></label>
+                            <input type="range" id="narrationGapSlider" min="0" max="50" value="16" oninput="updateStyles()">
+                            <p style="font-size: 0.72rem; color: #888; margin-top: 2px;">캐릭터를 나레이션으로 지정했을 때, 나레이션 줄들이 연속될 때만 적용되는 줄 간격이에요. 대사 칸 간격에는 영향 없어요.</p>
                         </div>
                     </div>
                 </div>
@@ -1191,6 +1229,10 @@
         let historyIndex = -1;
         let selectedImgElement = null;
 
+        /* 최근 사용한 '선택 글자 색상' - 세션(메모리)에만 유지, 저장/영구보관 안 함.
+           파일을 새로 불러오거나(resetToEmptyState) 페이지를 새로고침하면 초기화됨 */
+        let recentTextColors = [];
+
         window.addEventListener('DOMContentLoaded', () => {
             try {
                 document.execCommand('styleWithCSS', false, false);
@@ -1286,7 +1328,11 @@
             loadedFileName = '';
             document.getElementById('loadedFileInfo').style.display = 'none';
             document.getElementById('loadedFileInfo').textContent = '';
-            
+
+            // 파일을 새로 불러올 때(=새 작업 시작 시) 최근 색상 목록 초기화
+            recentTextColors = [];
+            updateRecentColorSwatches();
+
             document.getElementById('tistoryPreview').innerHTML = `
                 <div class="empty-placeholder" contenteditable="false">
                     <div class="empty-icon">📖</div>
@@ -1320,7 +1366,7 @@
                 document.getElementById('textColorPicker').value = s.textColor || '#222222';
                 document.getElementById('fontSizeSlider').value = s.fontSize || '15';
                 document.getElementById('sceneMarginSlider').value = s.sceneMargin || '28';
-                document.getElementById('contentPaddingSlider').value = s.contentPadding || '36';
+                document.getElementById('narrationGapSlider').value = s.narrationGap || '16';
 
                 if (s.modernCardImg !== undefined) document.getElementById('modernCardImgInput').value = s.modernCardImg;
                 if (s.modernCardBg !== undefined) document.getElementById('modernCardBgPicker').value = s.modernCardBg;
@@ -1803,13 +1849,16 @@
                     let sceneClasses = ['sp-scene-text'];
                     if (index === 0 || !prevIsNarration) sceneClasses.push('sp-scene-start');
                     if (index === logData.length - 1 || !nextIsNarration) sceneClasses.push('sp-scene-end');
+                    // 다음 줄도 나레이션이면(=나레이션이 계속 이어지면) 전용 간격 클래스 적용
+                    if (nextIsNarration) sceneClasses.push('sp-scene-continue');
 
                     const sceneHtml = `
                     <div class="${sceneClasses.join(' ')}">
                         <p data-ke-size="size16" data-placeholder="새로운 나레이션을 입력하세요.">${log.text}</p>
                     </div>`;
 
-                    html += wrapWithHandle(sceneHtml, index);
+                    const wrapperExtraClass = nextIsNarration ? 'narration-continue' : '';
+                    html += wrapWithHandle(sceneHtml, index, wrapperExtraClass);
                 } else {
                     const prevLog = logData[index - 1];
                     const nextLog = logData[index + 1];
@@ -1849,7 +1898,7 @@
             return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
-        function wrapWithHandle(contentHtml, index) {
+        function wrapWithHandle(contentHtml, index, extraClass) {
             const plusIconSvg = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
 
             const charNames = Object.keys(characterMap);
@@ -1868,7 +1917,7 @@
             }
 
             return `
-            <div class="log-block-wrapper" data-index="${index}">
+            <div class="log-block-wrapper${extraClass ? ' ' + extraClass : ''}" data-index="${index}">
                 <div class="move-handle" contenteditable="false">
                     <div class="add-dropdown-container">
                         <button type="button" title="아래에 블록 추가" onclick="toggleAddDropdown(this, event)">${plusIconSvg}</button>
@@ -2131,17 +2180,17 @@
             const text = document.getElementById('textColorPicker').value;
             const size = document.getElementById('fontSizeSlider').value;
             const margin = document.getElementById('sceneMarginSlider').value;
-            const contentPadding = document.getElementById('contentPaddingSlider').value;
+            const narrationGap = document.getElementById('narrationGapSlider').value;
 
             document.getElementById('fontSizeVal').textContent = size + 'px';
             document.getElementById('sceneMarginVal').textContent = margin + 'px';
-            document.getElementById('contentPaddingVal').textContent = contentPadding + 'px';
+            document.getElementById('narrationGapVal').textContent = narrationGap + 'px';
 
             document.documentElement.style.setProperty('--preview-bg', bg);
             document.documentElement.style.setProperty('--preview-text-color', text);
             document.documentElement.style.setProperty('--preview-font-size', size + 'px');
             document.documentElement.style.setProperty('--scene-margin', margin + 'px');
-            document.documentElement.style.setProperty('--content-padding', contentPadding + 'px');
+            document.documentElement.style.setProperty('--narration-gap', narrationGap + 'px');
 
             saveState();
         }
@@ -2288,14 +2337,14 @@
             const selection = window.getSelection();
             if (!selection.rangeCount || selection.isCollapsed) {
                 alert('효과를 적용할 텍스트를 드래그하여 선택해주세요.');
-                return;
+                return false;
             }
 
             const range = selection.getRangeAt(0);
             const previewArea = document.getElementById('tistoryPreview');
             if (!previewArea.contains(range.commonAncestorContainer)) {
                 alert('미리보기 영역 내부의 텍스트만 수정할 수 있습니다.');
-                return;
+                return false;
             }
 
             const span = document.createElement('span');
@@ -2311,6 +2360,7 @@
             previewArea.normalize();
             selection.removeAllRanges();
             saveState();
+            return true;
         }
 
         function applyTextTransparentBg() {
@@ -2366,7 +2416,36 @@
 
         function applyTextColor() {
             const colorValue = document.getElementById('selectedTextColorPicker').value;
-            applyInlineStyle({ color: colorValue });
+            const applied = applyInlineStyle({ color: colorValue });
+            if (applied) {
+                addRecentTextColor(colorValue);
+            }
+        }
+
+        /* 최근 사용한 글자 색상 목록에 추가 (중복 제거, 최근 것이 맨 앞, 최대 10개 보관) */
+        function addRecentTextColor(color) {
+            recentTextColors = recentTextColors.filter(c => c.toLowerCase() !== color.toLowerCase());
+            recentTextColors.unshift(color);
+            if (recentTextColors.length > 10) recentTextColors.length = 10;
+            updateRecentColorSwatches();
+        }
+
+        function updateRecentColorSwatches() {
+            const container = document.getElementById('recentColorSwatches');
+            if (!container) return;
+            if (recentTextColors.length === 0) {
+                container.innerHTML = '<span class="recent-color-empty">최근 사용한 색상이 여기 저장돼요</span>';
+                return;
+            }
+            container.innerHTML = recentTextColors.map(color =>
+                `<button type="button" class="recent-color-swatch" style="background-color:${color};" title="${color}" onclick="applyRecentColor('${color}')"></button>`
+            ).join('');
+        }
+
+        /* 스와치를 클릭하면: 선택창 색상값도 맞춰주고, 현재 드래그된 텍스트가 있으면 바로 적용 */
+        function applyRecentColor(color) {
+            document.getElementById('selectedTextColorPicker').value = color;
+            applyTextColor();
         }
 
         function applyTextBg() {
@@ -2384,7 +2463,7 @@
             const textColor = document.getElementById('textColorPicker').value;
             const fontSize = document.getElementById('fontSizeSlider').value + 'px';
             const sceneMargin = document.getElementById('sceneMarginSlider').value + 'px';
-            const contentPadding = document.getElementById('contentPaddingSlider').value + 'px';
+            const narrationGap = document.getElementById('narrationGapSlider').value + 'px';
 
             const isPlain = document.getElementById('plainViewToggle').checked;
             const isCard = document.getElementById('cardViewToggle').checked;
@@ -2536,7 +2615,7 @@
             }
 
             const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: ${contentPadding} !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
+<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: 36px !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
 <style>
   #trpg-log-container .sp-scene-text, #trpg-log-container .sp-scene-text * {
       margin-top: 6px !important;
@@ -2555,7 +2634,8 @@
   }
   #trpg-log-container .sp-scene-start { margin-top: ${sceneMargin} !important; }
   #trpg-log-container .sp-scene-end { margin-bottom: ${sceneMargin} !important; }
-  
+  #trpg-log-container .sp-scene-continue { margin-bottom: ${narrationGap} !important; }
+
   #trpg-log-container .sp-chat-line {
       display: flex !important;
       flex-direction: row !important;
@@ -2723,7 +2803,7 @@ ${diceResultCss}
                     textColor: document.getElementById('textColorPicker').value,
                     fontSize: document.getElementById('fontSizeSlider').value,
                     sceneMargin: document.getElementById('sceneMarginSlider').value,
-                    contentPadding: document.getElementById('contentPaddingSlider').value,
+                    narrationGap: document.getElementById('narrationGapSlider').value,
                     modernCardImg: document.getElementById('modernCardImgInput').value,
                     modernCardBg: document.getElementById('modernCardBgPicker').value,
                     modernCardBorder: document.getElementById('modernCardBorderPicker').value,
