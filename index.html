@@ -1065,11 +1065,17 @@
                 <div class="tab-pane" id="tab2">
                     <div class="setting-section">
                         <h3>텍스트 편집 툴바</h3>
+                        <p style="font-size: 0.72rem; color: #888; margin: 0 0 6px;">텍스트를 드래그해야 적용됩니다.</p>
                         <div style="display: flex; gap: 4px;">
                             <button id="btnFormatBold" class="btn format-btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('bold')" title="굵게"><b>B</b></button>
                             <button id="btnFormatItalic" class="btn format-btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('italic')" title="기울임"><i>I</i></button>
                             <button id="btnFormatUnderline" class="btn format-btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('underline')" title="밑줄"><u>U</u></button>
                             <button id="btnFormatStrike" class="btn format-btn" style="flex:1; padding: 6px;" onclick="applyTextFormat('strike')" title="취소선"><s>S</s></button>
+                        </div>
+                        <div style="display: flex; gap: 4px; margin-top: 4px;">
+                            <button id="btnAlignLeft" class="btn format-btn" style="flex:1; padding: 6px; font-size: 0.8rem;" onclick="applyTextFormat('alignLeft')" title="왼쪽 정렬">왼쪽 정렬</button>
+                            <button id="btnAlignCenter" class="btn format-btn" style="flex:1; padding: 6px; font-size: 0.8rem;" onclick="applyTextFormat('alignCenter')" title="가운데 정렬">가운데 정렬</button>
+                            <button id="btnAlignRight" class="btn format-btn" style="flex:1; padding: 6px; font-size: 0.8rem;" onclick="applyTextFormat('alignRight')" title="오른쪽 정렬">오른쪽 정렬</button>
                         </div>
 
                         <div class="color-picker-row" style="margin-top: 5px;">
@@ -1099,6 +1105,7 @@
                                 <input type="text" id="bodyImageUrlInput" class="text-input" style="flex:1;" placeholder="https://example.com/image.png">
                                 <button class="btn btn-primary" onclick="insertImageToPreview()">삽입</button>
                             </div>
+                            <p style="font-size: 0.72rem; color: #888; margin-top: 4px;">URL을 입력한 다음, 미리보기에서 이미지를 넣고 싶은 위치를 클릭해서 커서를 둔 상태로 [삽입] 버튼을 누르면 그 자리에 이미지가 들어가요.</p>
                         </div>
                     </div>
 
@@ -1335,7 +1342,7 @@
             const selection = window.getSelection();
 
             if (!selection.rangeCount || !previewArea.contains(selection.anchorNode)) {
-                ['btnFormatBold', 'btnFormatItalic', 'btnFormatUnderline', 'btnFormatStrike'].forEach(id => {
+                ['btnFormatBold', 'btnFormatItalic', 'btnFormatUnderline', 'btnFormatStrike', 'btnAlignLeft', 'btnAlignCenter', 'btnAlignRight'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.classList.remove('active');
                 });
@@ -1347,11 +1354,17 @@
                 const isItalic = document.queryCommandState('italic');
                 const isUnderline = document.queryCommandState('underline');
                 const isStrike = document.queryCommandState('strikethrough');
+                const isAlignLeft = document.queryCommandState('justifyLeft');
+                const isAlignCenter = document.queryCommandState('justifyCenter');
+                const isAlignRight = document.queryCommandState('justifyRight');
 
                 toggleBtnActive('btnFormatBold', isBold);
                 toggleBtnActive('btnFormatItalic', isItalic);
                 toggleBtnActive('btnFormatUnderline', isUnderline);
                 toggleBtnActive('btnFormatStrike', isStrike);
+                toggleBtnActive('btnAlignLeft', isAlignLeft);
+                toggleBtnActive('btnAlignCenter', isAlignCenter);
+                toggleBtnActive('btnAlignRight', isAlignRight);
             } catch(e) {}
         }
 
@@ -2559,6 +2572,9 @@
             else if (type === 'italic') cmd = 'italic';
             else if (type === 'underline') cmd = 'underline';
             else if (type === 'strike') cmd = 'strikethrough';
+            else if (type === 'alignLeft') cmd = 'justifyLeft';
+            else if (type === 'alignCenter') cmd = 'justifyCenter';
+            else if (type === 'alignRight') cmd = 'justifyRight';
 
             if (cmd) {
                 document.execCommand(cmd, false, null);
@@ -2900,13 +2916,13 @@
       text-align: center !important;
       font-family: 'Pretendard', sans-serif !important;
   }
-  /* color는 여기서 빼서 하위 요소에 강제 적용되지 않게 함 - 안 그러면 나레이션 안에서
-     직접 바꾼 글자색(인라인 style)이 이 !important에 밀려서 티스토리에 붙여넣었을 때
-     적용이 안 되는 문제가 있었음. font-size/line-height 등 나머지 서식만 그대로 물려줌 */
+  /* color/text-align은 여기서 빼서 하위 요소에 강제 적용되지 않게 함 - 안 그러면 나레이션
+     문단 안에서 직접 바꾼 글자색이나(인라인 style) 드래그해서 바꾼 정렬(왼쪽/오른쪽 정렬)이
+     이 !important에 밀려서 티스토리에 붙여넣었을 때 적용이 안 되는 문제가 있었음.
+     font-size/line-height 등 나머지 서식만 그대로 물려줌 */
   #trpg-log-container .sp-scene-text * {
       font-size: ${fontSize} !important;
       line-height: 1.6 !important;
-      text-align: center !important;
       font-family: 'Pretendard', sans-serif !important;
   }
   #trpg-log-container .sp-scene-text p {
