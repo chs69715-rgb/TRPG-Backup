@@ -1463,19 +1463,52 @@
 
                 if (!range.collapsed) return; // 같은 블록 안에서의 부분 선택 삭제는 정상 허용
 
-                const contentEl = closestFrom(range.startContainer, '.sp-chat-text, .sp-scene-text p');
+                /* 대사는 .sp-chat-body, 나레이션은 .sp-scene-text 전체를 "이 블록의
+                   편집 가능 영역"으로 본다(.sp-chat-text/p 하나만 보면 안 됨) - 엔터를
+                   여러 번 눌러 빈 줄을 만들면 브라우저가 .sp-chat-text를 하나 더
+                   만들어서 형제로 끼워넣는데, 그 개별 div만 기준으로 삼으면 "이 안에는
+                   아무것도 없다"고 착각해서 빈 줄 지우는 Backspace까지 막아버리게 된다.
+                   더 넓은 .sp-chat-body/.sp-scene-text 단위로 보면 같은 블록 안에서
+                   생긴 여러 줄(빈 줄 포함)은 자유롭게 지울 수 있으면서도, 그 바깥
+                   (다른 .log-block-wrapper)으로는 못 넘어가게 막을 수 있다 */
+                const contentEl = closestFrom(range.startContainer, '.sp-chat-body, .sp-scene-text');
                 if (!contentEl) return;
+
+                /* 대사 이름표(.sp-chat-name)는 캐릭터 선택으로 자동으로 붙는 라벨이라
+                   Backspace로 파고들어 지워지거나 대사 줄과 뒤섞이면 안 된다. 그래서
+                   "이 블록의 진짜 시작"은 이름표가 있으면 그 바로 다음부터로 본다 */
+                const nameEl = contentEl.querySelector(':scope > .sp-chat-name');
+                let startBoundaryNode = contentEl;
+                let startBoundaryOffset = 0;
+                if (nameEl) {
+                    startBoundaryOffset = Array.prototype.indexOf.call(contentEl.childNodes, nameEl) + 1;
+                }
+
+                /* "커서 앞/뒤에 지울 게 있는지"는 텍스트 길이(.toString())만 봐서는 안
+                   된다 - 빈 줄(<br> 등)은 글자가 아니라서 텍스트 길이가 0이지만 분명히
+                   지울 대상이다. 반대로 Range.cloneContents()의 childNodes.length만
+                   보는 것도 안 되는데, 범위 경계에 걸친 빈 요소는 내용이 하나도 없어도
+                   빈 껍데기 clone이 하나 끼어들어서 "뭔가 있다"고 착각하게 만든다.
+                   거기에 더해 템플릿 문자열의 들여쓰기 때문에 태그 사이에 공백/줄바꿈만
+                   있는 텍스트 노드도 끼어있을 수 있어서, 공백만 있는 것도 "내용 없음"으로
+                   봐야 한다. 그래서 실제 글자(공백 제외 textContent)나 <br>/<img> 같은
+                   눈에 보이는 내용이 있는지로 판단한다 - 이게 하나도 없을 때만 블록
+                   경계로 보고 막는다 */
+                const hasDeletableContent = (fragment) => {
+                    if (fragment.textContent.trim().length > 0) return true;
+                    return !!fragment.querySelector('br, img');
+                };
 
                 if (e.key === 'Backspace') {
                     const r = document.createRange();
-                    r.selectNodeContents(contentEl);
+                    r.setStart(startBoundaryNode, startBoundaryOffset);
                     r.setEnd(range.startContainer, range.startOffset);
-                    if (r.toString().length === 0) e.preventDefault();
+                    if (!hasDeletableContent(r.cloneContents())) e.preventDefault();
                 } else if (e.key === 'Delete') {
                     const r = document.createRange();
-                    r.selectNodeContents(contentEl);
                     r.setStart(range.endContainer, range.endOffset);
-                    if (r.toString().length === 0) e.preventDefault();
+                    r.setEnd(contentEl, contentEl.childNodes.length);
+                    if (!hasDeletableContent(r.cloneContents())) e.preventDefault();
                 }
             });
 
