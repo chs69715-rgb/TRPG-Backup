@@ -410,6 +410,97 @@
             outline: 2px dashed var(--accent-color);
         }
 
+        /* BGM(배경음악) 삽입 버튼 - 이미지처럼 본문 중간에 넣는 클릭형 위젯.
+           contenteditable="false"라서 클릭해서 재생만 되고, 안의 글자는 편집되지 않음 */
+        .trpg-bgm-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(124, 93, 250, 0.12);
+            color: #7c5dfa;
+            border: 1px solid rgba(124, 93, 250, 0.4);
+            border-radius: 20px;
+            padding: 4px 12px 4px 9px;
+            font-size: 0.85em;
+            font-weight: 600;
+            font-family: 'Pretendard', sans-serif;
+            cursor: pointer;
+            user-select: none;
+            margin: 2px 4px;
+            transition: background 0.15s;
+        }
+        .trpg-bgm-btn:hover { background: rgba(124, 93, 250, 0.22); }
+        .trpg-bgm-btn.playing { background: #7c5dfa; color: #fff; }
+
+        /* 화면 상단에 고정으로 뜨는 재생바 - BGM 버튼을 누르면 나타남 */
+        .trpg-bgm-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 999999;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #1c1c28;
+            color: #fff;
+            padding: 8px 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+            font-family: 'Pretendard', sans-serif;
+            font-size: 0.85rem;
+        }
+        .trpg-bgm-bar-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .trpg-bgm-bar-controls { display: flex; gap: 6px; }
+        .trpg-bgm-bar-controls button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+            padding: 4px 9px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .trpg-bgm-bar-controls button:hover { background: rgba(255,255,255,0.22); }
+
+        /* BGM 자체 볼륨 조절 (기기 전체 소리와 별개) */
+        .trpg-bgm-bar-volume { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .trpg-bgm-bar-volume .trpg-bgm-vol-icon {
+            cursor: pointer;
+            font-size: 0.95rem;
+            user-select: none;
+            line-height: 1;
+        }
+        .trpg-bgm-bar-volume input[type="range"] {
+            width: 70px;
+            accent-color: #7c5dfa;
+            cursor: pointer;
+        }
+
+        /* 모바일 화면에서도 재생바가 잘리거나 버튼이 너무 작아지지 않게 조정 */
+        @media (max-width: 480px) {
+            .trpg-bgm-bar {
+                padding: 6px 10px;
+                gap: 6px;
+                font-size: 0.78rem;
+            }
+            .trpg-bgm-bar-controls { gap: 3px; }
+            .trpg-bgm-bar-controls button {
+                padding: 6px 9px;
+                font-size: 1rem;
+                min-width: 34px;
+            }
+            .trpg-bgm-bar-volume input[type="range"] {
+                width: 46px;
+            }
+            .trpg-bgm-btn {
+                padding: 6px 11px 6px 8px;
+                font-size: 0.85em;
+            }
+        }
+
         .empty-placeholder {
             height: 100%;
             min-height: 400px;
@@ -1110,6 +1201,22 @@
                     </div>
 
                     <div class="setting-section" style="margin-top: 5px;">
+                        <h3>배경음악(BGM) 삽입</h3>
+                        <div class="input-group">
+                            <label>곡 제목 (선택)</label>
+                            <input type="text" id="bgmTitleInput" class="text-input" placeholder="예: 오프닝 테마">
+                        </div>
+                        <div class="input-group" style="margin-top: 8px;">
+                            <label>mp3 파일로 넣기</label>
+                            <div class="url-input-wrap">
+                                <input type="file" id="bgmFileInput" class="text-input" style="flex:1;" accept="audio/mpeg,audio/mp3,.mp3">
+                                <button class="btn btn-primary" onclick="insertBgmFileToPreview()">삽입</button>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.72rem; color: #888; margin-top: 4px;">곡 제목(선택)을 입력하고 mp3 파일을 고른 다음, 이미지처럼 미리보기에서 넣고 싶은 위치를 클릭해서 커서를 둔 상태로 [삽입]을 누르면 재생 버튼이 생겨요. 버튼을 여러 개 넣으면 미리보기(티스토리에서는 글 화면) 위쪽에 뜨는 재생바에서 이전/다음 곡으로 넘기면서 재생할 수 있어요. 단, 파일이 글 코드 안에 그대로 저장되기 때문에 너무 큰 파일(대략 5MB 이상)은 티스토리에 붙여넣을 때 느려지거나 실패할 수 있어요 - 되도록 짧은 구간이나 용량이 작은 mp3를 추천해요.</p>
+                    </div>
+
+                    <div class="setting-section" style="margin-top: 5px;">
                         <h3>본문 전체 스타일 설정</h3>
                         
                         <div class="color-picker-row">
@@ -1267,6 +1374,9 @@
                     saveState();
                 }
             });
+
+            /* 미리보기 안에서도 BGM 버튼을 눌러보며 미리 테스트할 수 있게 재생 기능 연결 */
+            trpgInitBgmDelegation('#tistoryPreview');
 
             previewEl.addEventListener('dblclick', function(e) {
                 if (e.target.tagName === 'IMG') {
@@ -2539,6 +2649,279 @@
             saveState();
         }
 
+        /* ===== BGM(배경음악) 삽입 & 재생 =====
+           본문 이미지 삽입과 똑같은 방식으로, 커서 위치에 클릭형 버튼(.trpg-bgm-btn)을
+           끼워넣는다. mp3 파일을 base64로 읽어서 <audio> 태그로 바로 재생하고, 화면
+           위쪽에 고정된 재생바(.trpg-bgm-bar)로 재생/일시정지·이전/다음 곡 넘기기를
+           조작한다. 티스토리로 내보낼 때도 이 로직을 그대로 <script>로 같이 내보내서,
+           블로그 글에서도 동일하게 작동하게 한다. */
+
+        /* mp3 파일을 직접 넣기: 파일을 base64로 통째로 읽어서 data-audio-src 속성에
+           담아둔다. 단, 파일 내용이 글 코드 안에 그대로 들어가기 때문에 너무 큰 파일은
+           티스토리에 붙여넣을 때 무겁거나 실패할 수 있어서 용량 제한/경고를 둔다 */
+        function insertBgmFileToPreview() {
+            const fileInput = document.getElementById('bgmFileInput');
+            const titleInput = document.getElementById('bgmTitleInput');
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) {
+                alert('삽입할 mp3 파일을 선택해주세요.');
+                return;
+            }
+            const looksLikeMp3 = /audio\/(mpeg|mp3)/i.test(file.type) || /\.mp3$/i.test(file.name);
+            if (!looksLikeMp3) {
+                alert('mp3 파일만 넣을 수 있어요.');
+                return;
+            }
+            const MAX_SIZE = 15 * 1024 * 1024;
+            if (file.size > MAX_SIZE) {
+                alert('파일이 너무 커요(15MB 이상). 더 짧은 구간으로 자르거나 압축한 mp3를 사용해주세요.');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                if (!confirm('파일 용량이 커서(5MB 이상) 티스토리에 붙여넣을 때 느려지거나 실패할 수 있어요. 그래도 계속할까요?')) return;
+            }
+
+            const title = titleInput.value.trim() || file.name.replace(/\.mp3$/i, '') || '배경음악';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                const selection = window.getSelection();
+                const previewArea = document.getElementById('tistoryPreview');
+
+                const btn = document.createElement('span');
+                btn.className = 'trpg-bgm-btn';
+                btn.setAttribute('contenteditable', 'false');
+                btn.setAttribute('data-audio-src', dataUrl);
+                btn.setAttribute('data-title', escAttr(title));
+                btn.innerHTML = `<span class="trpg-bgm-icon">🎧</span><span class="trpg-bgm-label">${escHtml(title)}</span>`;
+
+                if (selection.rangeCount > 0 && previewArea.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+                    const range = selection.getRangeAt(0);
+                    range.insertNode(btn);
+                    range.setStartAfter(btn);
+                    range.collapse(true);
+                } else {
+                    previewArea.appendChild(btn);
+                }
+
+                fileInput.value = '';
+                titleInput.value = '';
+                saveState();
+            };
+            reader.onerror = function() {
+                alert('파일을 읽는 중 문제가 생겼어요. 다시 시도해주세요.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* 에디터 미리보기용 BGM 재생 상태 (에디터 안에서 미리 테스트해볼 수 있게) */
+        let trpgCurrentBgmBtn = null;
+        let trpgIsPlayingIntent = false;
+        const trpgBgmContainerSelector = '#tistoryPreview';
+        /* BGM 자체 볼륨 - 기기/브라우저 전체 소리와 별개로 이 재생바에서만 조절됨.
+           trpgBgmVolume은 음소거가 아닐 때의 마지막 볼륨(0~1)을 기억해뒀다가,
+           음소거를 풀면 그 값으로 되돌아가게 한다 */
+        let trpgBgmVolume = 1;
+        let trpgBgmMuted = false;
+
+        function trpgUpdatePlayPauseIcon() {
+            const btn = document.getElementById('trpgBgmPlayPauseBtn');
+            if (btn) btn.textContent = trpgIsPlayingIntent ? '⏸' : '▶';
+        }
+
+        function trpgUpdateVolumeIcon() {
+            const icon = document.getElementById('trpgBgmVolIcon');
+            if (!icon) return;
+            if (trpgBgmMuted || trpgBgmVolume === 0) icon.textContent = '🔇';
+            else if (trpgBgmVolume < 0.5) icon.textContent = '🔉';
+            else icon.textContent = '🔊';
+        }
+
+        /* 재생바의 볼륨 슬라이더(0~100)를 조작했을 때 호출 - 슬라이더를 만지면
+           자동으로 음소거는 풀린다 */
+        function trpgBgmSetVolume(val) {
+            const v = Math.max(0, Math.min(100, Number(val))) / 100;
+            trpgBgmVolume = v;
+            trpgBgmMuted = false;
+            const audio = document.getElementById('trpgBgmAudio');
+            if (audio) audio.volume = v;
+            trpgUpdateVolumeIcon();
+        }
+
+        /* 스피커 아이콘 클릭 - 음소거 켜기/끄기. 음소거를 풀면 이전 볼륨으로 복귀 */
+        function trpgBgmToggleMute() {
+            trpgBgmMuted = !trpgBgmMuted;
+            const audio = document.getElementById('trpgBgmAudio');
+            if (audio) audio.volume = trpgBgmMuted ? 0 : trpgBgmVolume;
+            const slider = document.getElementById('trpgBgmVolumeSlider');
+            if (slider) slider.value = trpgBgmMuted ? 0 : Math.round(trpgBgmVolume * 100);
+            trpgUpdateVolumeIcon();
+        }
+
+        function trpgEnsureBgmBar() {
+            let bar = document.getElementById('trpgBgmBar');
+            if (bar) return bar;
+            bar = document.createElement('div');
+            bar.id = 'trpgBgmBar';
+            bar.className = 'trpg-bgm-bar';
+
+            const icon = document.createElement('span');
+            icon.textContent = '🎵';
+            const title = document.createElement('span');
+            title.className = 'trpg-bgm-bar-title';
+            title.id = 'trpgBgmBarTitle';
+            title.textContent = '-';
+
+            const volWrap = document.createElement('div');
+            volWrap.className = 'trpg-bgm-bar-volume';
+            const volIcon = document.createElement('span');
+            volIcon.className = 'trpg-bgm-vol-icon';
+            volIcon.id = 'trpgBgmVolIcon';
+            volIcon.title = '음소거 켜기/끄기';
+            volIcon.textContent = '🔊';
+            volIcon.addEventListener('click', () => trpgBgmToggleMute());
+            const volSlider = document.createElement('input');
+            volSlider.type = 'range';
+            volSlider.min = '0';
+            volSlider.max = '100';
+            volSlider.value = String(Math.round(trpgBgmVolume * 100));
+            volSlider.id = 'trpgBgmVolumeSlider';
+            volSlider.title = 'BGM 소리 크기';
+            volSlider.addEventListener('input', function() { trpgBgmSetVolume(this.value); });
+            volWrap.appendChild(volIcon);
+            volWrap.appendChild(volSlider);
+
+            const controls = document.createElement('div');
+            controls.className = 'trpg-bgm-bar-controls';
+
+            const mkBtn = (label, title_, fn) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = label;
+                b.title = title_;
+                b.addEventListener('click', fn);
+                return b;
+            };
+            controls.appendChild(mkBtn('⏮', '이전 곡', () => trpgBgmPrev()));
+            const playPauseBtn = mkBtn('⏸', '재생/일시정지', () => trpgBgmTogglePlay());
+            playPauseBtn.id = 'trpgBgmPlayPauseBtn';
+            controls.appendChild(playPauseBtn);
+            controls.appendChild(mkBtn('⏭', '다음 곡', () => trpgBgmNext()));
+            controls.appendChild(mkBtn('✕', '정지', () => trpgBgmStop()));
+
+            bar.appendChild(icon);
+            bar.appendChild(title);
+            bar.appendChild(volWrap);
+            bar.appendChild(controls);
+            document.body.appendChild(bar);
+            return bar;
+        }
+
+        function trpgBgmGetPlaylist() {
+            const root = document.querySelector(trpgBgmContainerSelector);
+            return root ? Array.from(root.querySelectorAll('.trpg-bgm-btn')) : [];
+        }
+
+        /* mp3 파일 재생용 <audio> 요소 - 하나 만들어서 재사용 */
+        function trpgGetAudioEl() {
+            let audio = document.getElementById('trpgBgmAudio');
+            if (!audio) {
+                audio = document.createElement('audio');
+                audio.id = 'trpgBgmAudio';
+                audio.style.display = 'none';
+                audio.volume = trpgBgmMuted ? 0 : trpgBgmVolume;
+                audio.addEventListener('ended', () => trpgBgmNext());
+                document.body.appendChild(audio);
+            }
+            return audio;
+        }
+
+        function trpgBgmPlay(btn) {
+            trpgBgmGetPlaylist().forEach(b => b.classList.remove('playing'));
+            btn.classList.add('playing');
+            trpgCurrentBgmBtn = btn;
+            trpgIsPlayingIntent = true;
+
+            const title = btn.getAttribute('data-title') || '배경음악';
+            const bar = trpgEnsureBgmBar();
+            bar.style.display = 'flex';
+            document.getElementById('trpgBgmBarTitle').textContent = title;
+            trpgUpdatePlayPauseIcon();
+
+            const audio = trpgGetAudioEl();
+            audio.src = btn.getAttribute('data-audio-src');
+            audio.muted = false;
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+        }
+
+        /* 일시정지/재생 전환. 버튼 아이콘은 실제 재생 상태가 아니라 사용자가 누른
+           "의도"를 기준으로 즉시 바뀐다 */
+        function trpgBgmTogglePlay() {
+            const audio = document.getElementById('trpgBgmAudio');
+            if (!audio) return;
+            if (trpgIsPlayingIntent) { audio.pause(); trpgIsPlayingIntent = false; }
+            else { audio.play().catch(() => {}); trpgIsPlayingIntent = true; }
+            trpgUpdatePlayPauseIcon();
+        }
+
+        function trpgBgmStepTo(delta) {
+            const list = trpgBgmGetPlaylist();
+            if (list.length === 0) return;
+            let idx = trpgCurrentBgmBtn ? list.indexOf(trpgCurrentBgmBtn) : -1;
+            idx = (idx + delta + list.length) % list.length;
+            trpgBgmPlay(list[idx]);
+        }
+
+        function trpgBgmNext() { trpgBgmStepTo(1); }
+        function trpgBgmPrev() { trpgBgmStepTo(-1); }
+
+        function trpgBgmStop() {
+            const audio = document.getElementById('trpgBgmAudio');
+            if (audio) { try { audio.pause(); audio.currentTime = 0; } catch(e) {} }
+            trpgIsPlayingIntent = false;
+            trpgBgmGetPlaylist().forEach(b => b.classList.remove('playing'));
+            trpgCurrentBgmBtn = null;
+            const bar = document.getElementById('trpgBgmBar');
+            if (bar) bar.style.display = 'none';
+        }
+
+        function trpgInitBgmDelegation(containerSelector) {
+            const root = document.querySelector(containerSelector);
+            if (!root) return;
+            root.addEventListener('click', function(e) {
+                const btn = e.target.closest('.trpg-bgm-btn');
+                if (btn) {
+                    e.stopPropagation();
+                    trpgBgmPlay(btn);
+                }
+            });
+            trpgInitBgmAutoPauseOnLeave();
+        }
+
+        /* 탭/화면을 벗어나면(다른 앱으로 전환, 화면 끄기, 브라우저 탭 전환 등) BGM을
+           자동으로 일시정지한다 - 안 그러면 화면에서 나가도 소리만 계속 재생됨.
+           페이지가 실제로 언로드될 때(pagehide)도 한 번 더 확실히 멈춘다 */
+        function trpgInitBgmAutoPauseOnLeave() {
+            if (window.__trpgBgmAutoPauseBound) return;
+            window.__trpgBgmAutoPauseBound = true;
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    const audio = document.getElementById('trpgBgmAudio');
+                    if (audio && !audio.paused) {
+                        audio.pause();
+                        trpgIsPlayingIntent = false;
+                        trpgUpdatePlayPauseIcon();
+                    }
+                }
+            });
+            window.addEventListener('pagehide', function() {
+                const audio = document.getElementById('trpgBgmAudio');
+                if (audio) { try { audio.pause(); } catch(e) {} }
+            });
+        }
+
         function closeImageMenuModal() {
             document.getElementById('imageMenuModal').style.display = 'none';
             selectedImgElement = null;
@@ -2905,8 +3288,11 @@
             }
 
             const embeddedCss = `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; padding: 36px !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
+<div id="trpg-log-container" style="background-color: ${document.getElementById('bgColorPicker').value} !important; border-radius: 8px !important; color: ${textColor} !important; font-size: ${fontSize} !important; font-family: 'Pretendard', sans-serif !important;">
 <style>
+  /* 좌우 여백을 인라인이 아니라 스타일시트에 둬서, 아래 모바일 미디어쿼리에서
+     화면이 좁을 때 여백을 줄여 본문/사진이 더 넓게 보이도록 오버라이드할 수 있게 함 */
+  #trpg-log-container { padding: 36px !important; }
   #trpg-log-container .sp-scene-text {
       margin-top: 6px !important;
       margin-bottom: 6px !important;
@@ -3049,6 +3435,9 @@ ${diceResultCss}
   }
 
   @media (max-width: 768px) {
+      #trpg-log-container {
+          padding: 24px 16px !important;
+      }
       #trpg-log-container .sp-chat-line {
           gap: 8px !important;
           margin-bottom: 12px !important;
@@ -3065,6 +3454,98 @@ ${diceResultCss}
           font-size: 14px !important;
       }
   }
+
+  .trpg-bgm-btn {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      background: rgba(124, 93, 250, 0.12) !important;
+      color: #7c5dfa !important;
+      border: 1px solid rgba(124, 93, 250, 0.4) !important;
+      border-radius: 20px !important;
+      padding: 4px 12px 4px 9px !important;
+      font-size: 0.85em !important;
+      font-weight: 600 !important;
+      font-family: 'Pretendard', sans-serif !important;
+      cursor: pointer !important;
+      user-select: none !important;
+      margin: 2px 4px !important;
+      transition: background 0.15s !important;
+  }
+  .trpg-bgm-btn:hover { background: rgba(124, 93, 250, 0.22) !important; }
+  .trpg-bgm-btn.playing { background: #7c5dfa !important; color: #fff !important; }
+
+  .trpg-bgm-bar {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important;
+      z-index: 999999 !important;
+      display: none;
+      align-items: center !important;
+      gap: 10px !important;
+      background: #1c1c28 !important;
+      color: #fff !important;
+      padding: 8px 16px !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35) !important;
+      font-family: 'Pretendard', sans-serif !important;
+      font-size: 0.85rem !important;
+  }
+  .trpg-bgm-bar-title {
+      flex: 1 !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      color: #fff !important;
+  }
+  .trpg-bgm-bar-controls { display: flex !important; gap: 6px !important; }
+  .trpg-bgm-bar-controls button {
+      background: rgba(255,255,255,0.1) !important;
+      border: none !important;
+      color: #fff !important;
+      border-radius: 4px !important;
+      padding: 4px 9px !important;
+      cursor: pointer !important;
+      font-size: 0.9rem !important;
+  }
+  .trpg-bgm-bar-controls button:hover { background: rgba(255,255,255,0.22) !important; }
+
+  /* BGM 자체 볼륨 조절 (기기 전체 소리와 별개) */
+  .trpg-bgm-bar-volume { display: flex !important; align-items: center !important; gap: 4px !important; flex-shrink: 0 !important; }
+  .trpg-bgm-bar-volume .trpg-bgm-vol-icon {
+      cursor: pointer !important;
+      font-size: 0.95rem !important;
+      user-select: none !important;
+      line-height: 1 !important;
+  }
+  .trpg-bgm-bar-volume input[type="range"] {
+      width: 70px !important;
+      accent-color: #7c5dfa !important;
+      cursor: pointer !important;
+  }
+
+  /* 모바일(티스토리 앱/모바일 웹)에서도 재생바가 잘리거나 버튼이 너무 작아지지 않게 조정 */
+  @media (max-width: 480px) {
+      #trpg-log-container {
+          padding: 20px 12px !important;
+      }
+      .trpg-bgm-bar {
+          padding: 6px 10px !important;
+          gap: 6px !important;
+          font-size: 0.78rem !important;
+      }
+      .trpg-bgm-bar-controls { gap: 3px !important; }
+      .trpg-bgm-bar-controls button {
+          padding: 6px 9px !important;
+          font-size: 1rem !important;
+          min-width: 34px !important;
+      }
+      .trpg-bgm-bar-volume input[type="range"] {
+          width: 46px !important;
+      }
+      .trpg-bgm-btn {
+          padding: 6px 11px 6px 8px !important;
+          font-size: 0.85em !important;
+      }
+  }
 </style>
 `;
 
@@ -3073,7 +3554,220 @@ ${diceResultCss}
             const handles = tempContainer.querySelectorAll('.move-handle');
             handles.forEach(h => h.remove());
 
-            const finalHtml = embeddedCss + tempContainer.innerHTML + '</div>';
+            /* BGM 버튼이 하나라도 있을 때만 재생 스크립트를 같이 내보낸다.
+               (즉시실행함수(IIFE)로 감싸서, 티스토리 블로그의 다른 스크립트나
+               같은 페이지에 놓일 수 있는 다른 글의 스크립트와 이름이 겹치지 않게 함) */
+            let bgmScript = '';
+            if (tempContainer.querySelector('.trpg-bgm-btn')) {
+                bgmScript = `
+<script>
+(function() {
+  var currentBtn = null;
+  var isPlayingIntent = false;
+  var containerSelector = '#trpg-log-container';
+  /* BGM 자체 볼륨 - 기기/브라우저 전체 소리와 별개로 이 재생바에서만 조절됨 */
+  var bgmVolume = 1;
+  var bgmMuted = false;
+
+  function updatePlayPauseIcon() {
+    var btn = document.getElementById('trpgBgmPlayPauseBtn');
+    if (btn) btn.textContent = isPlayingIntent ? '⏸' : '▶';
+  }
+
+  function updateVolumeIcon() {
+    var icon = document.getElementById('trpgBgmVolIcon');
+    if (!icon) return;
+    if (bgmMuted || bgmVolume === 0) icon.textContent = '🔇';
+    else if (bgmVolume < 0.5) icon.textContent = '🔉';
+    else icon.textContent = '🔊';
+  }
+
+  function bgmSetVolume(val) {
+    var v = Math.max(0, Math.min(100, Number(val))) / 100;
+    bgmVolume = v;
+    bgmMuted = false;
+    var audio = document.getElementById('trpgBgmAudio');
+    if (audio) audio.volume = v;
+    updateVolumeIcon();
+  }
+
+  function bgmToggleMute() {
+    bgmMuted = !bgmMuted;
+    var audio = document.getElementById('trpgBgmAudio');
+    if (audio) audio.volume = bgmMuted ? 0 : bgmVolume;
+    var slider = document.getElementById('trpgBgmVolumeSlider');
+    if (slider) slider.value = bgmMuted ? 0 : Math.round(bgmVolume * 100);
+    updateVolumeIcon();
+  }
+
+  function ensureBar() {
+    var bar = document.getElementById('trpgBgmBar');
+    if (bar) return bar;
+    bar = document.createElement('div');
+    bar.id = 'trpgBgmBar';
+    bar.className = 'trpg-bgm-bar';
+
+    var icon = document.createElement('span');
+    icon.textContent = '🎵';
+    var title = document.createElement('span');
+    title.className = 'trpg-bgm-bar-title';
+    title.id = 'trpgBgmBarTitle';
+    title.textContent = '-';
+
+    var volWrap = document.createElement('div');
+    volWrap.className = 'trpg-bgm-bar-volume';
+    var volIcon = document.createElement('span');
+    volIcon.className = 'trpg-bgm-vol-icon';
+    volIcon.id = 'trpgBgmVolIcon';
+    volIcon.title = '음소거 켜기/끄기';
+    volIcon.textContent = '🔊';
+    volIcon.addEventListener('click', function() { bgmToggleMute(); });
+    var volSlider = document.createElement('input');
+    volSlider.type = 'range';
+    volSlider.min = '0';
+    volSlider.max = '100';
+    volSlider.value = String(Math.round(bgmVolume * 100));
+    volSlider.id = 'trpgBgmVolumeSlider';
+    volSlider.title = 'BGM 소리 크기';
+    volSlider.addEventListener('input', function() { bgmSetVolume(this.value); });
+    volWrap.appendChild(volIcon);
+    volWrap.appendChild(volSlider);
+
+    var controls = document.createElement('div');
+    controls.className = 'trpg-bgm-bar-controls';
+
+    function mkBtn(label, titleText, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.title = titleText;
+      b.addEventListener('click', fn);
+      return b;
+    }
+    controls.appendChild(mkBtn('⏮', '이전 곡', function() { bgmPrev(); }));
+    var playPauseBtn = mkBtn('⏸', '재생/일시정지', function() { bgmTogglePlay(); });
+    playPauseBtn.id = 'trpgBgmPlayPauseBtn';
+    controls.appendChild(playPauseBtn);
+    controls.appendChild(mkBtn('⏭', '다음 곡', function() { bgmNext(); }));
+    controls.appendChild(mkBtn('✕', '정지', function() { bgmStop(); }));
+
+    bar.appendChild(icon);
+    bar.appendChild(title);
+    bar.appendChild(volWrap);
+    bar.appendChild(controls);
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function getPlaylist() {
+    var root = document.querySelector(containerSelector);
+    return root ? Array.prototype.slice.call(root.querySelectorAll('.trpg-bgm-btn')) : [];
+  }
+
+  /* mp3 파일 재생용 <audio> 요소 - 하나 만들어서 재사용 */
+  function getAudioEl() {
+    var audio = document.getElementById('trpgBgmAudio');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'trpgBgmAudio';
+      audio.style.display = 'none';
+      audio.volume = bgmMuted ? 0 : bgmVolume;
+      audio.addEventListener('ended', function() { bgmNext(); });
+      document.body.appendChild(audio);
+    }
+    return audio;
+  }
+
+  function bgmPlay(btn) {
+    getPlaylist().forEach(function(b) { b.classList.remove('playing'); });
+    btn.classList.add('playing');
+    currentBtn = btn;
+    isPlayingIntent = true;
+
+    var title = btn.getAttribute('data-title') || '배경음악';
+    var bar = ensureBar();
+    bar.style.display = 'flex';
+    document.getElementById('trpgBgmBarTitle').textContent = title;
+    updatePlayPauseIcon();
+
+    var audio = getAudioEl();
+    audio.src = btn.getAttribute('data-audio-src');
+    audio.muted = false;
+    audio.currentTime = 0;
+    audio.play().catch(function() {});
+  }
+
+  /* 일시정지/재생 전환. 아이콘은 실제 재생 상태가 아니라 사용자가 누른 의도를
+     기준으로 즉시 바뀐다 */
+  function bgmTogglePlay() {
+    var audio = document.getElementById('trpgBgmAudio');
+    if (!audio) return;
+    if (isPlayingIntent) { audio.pause(); isPlayingIntent = false; }
+    else { audio.play().catch(function() {}); isPlayingIntent = true; }
+    updatePlayPauseIcon();
+  }
+
+  function bgmStepTo(delta) {
+    var list = getPlaylist();
+    if (list.length === 0) return;
+    var idx = currentBtn ? list.indexOf(currentBtn) : -1;
+    idx = (idx + delta + list.length) % list.length;
+    bgmPlay(list[idx]);
+  }
+
+  function bgmNext() { bgmStepTo(1); }
+  function bgmPrev() { bgmStepTo(-1); }
+
+  function bgmStop() {
+    var audio = document.getElementById('trpgBgmAudio');
+    if (audio) { try { audio.pause(); audio.currentTime = 0; } catch(e) {} }
+    isPlayingIntent = false;
+    getPlaylist().forEach(function(b) { b.classList.remove('playing'); });
+    currentBtn = null;
+    var bar = document.getElementById('trpgBgmBar');
+    if (bar) bar.style.display = 'none';
+  }
+
+  /* 탭/화면을 벗어나면(다른 앱으로 전환, 화면 끄기, 다른 탭으로 이동 등) BGM을
+     자동으로 일시정지한다 - 안 그러면 화면에서 나가도 소리만 계속 재생됨.
+     페이지가 실제로 언로드될 때(pagehide)도 한 번 더 확실히 멈춘다 */
+  function initAutoPauseOnLeave() {
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        var audio = document.getElementById('trpgBgmAudio');
+        if (audio && !audio.paused) {
+          audio.pause();
+          isPlayingIntent = false;
+          updatePlayPauseIcon();
+        }
+      }
+    });
+    window.addEventListener('pagehide', function() {
+      var audio = document.getElementById('trpgBgmAudio');
+      if (audio) { try { audio.pause(); } catch(e) {} }
+    });
+  }
+
+  function init() {
+    var root = document.querySelector(containerSelector);
+    if (!root) return;
+    root.addEventListener('click', function(e) {
+      var btn = e.target.closest ? e.target.closest('.trpg-bgm-btn') : null;
+      if (btn) { e.stopPropagation(); bgmPlay(btn); }
+    });
+    initAutoPauseOnLeave();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+<\/script>`;
+            }
+
+            const finalHtml = embeddedCss + tempContainer.innerHTML + '</div>' + bgmScript;
 
             navigator.clipboard.writeText(finalHtml).then(() => {
                 alert('티스토리에 완벽 호환되는 HTML 코드가 복사되었습니다!\n\n티스토리 글쓰기 우측 상단에서 [HTML 모드]로 변경 후 붙여넣어주세요.');
