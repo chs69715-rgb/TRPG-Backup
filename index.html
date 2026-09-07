@@ -2984,6 +2984,20 @@
             return root ? Array.from(root.querySelectorAll('.trpg-bgm-btn')) : [];
         }
 
+        /* 재생 실패 시 원인을 재생바 제목 자리에 바로 보여준다 (모바일에서는
+           개발자도구를 열 수 없어서, 이게 없으면 왜 안 되는지 확인할 방법이 없음) */
+        function trpgShowBgmError(reason) {
+            const titleEl = document.getElementById('trpgBgmBarTitle');
+            if (titleEl) titleEl.textContent = `재생 실패 (${reason})`;
+        }
+
+        const TRPG_MEDIA_ERROR_NAMES = {
+            1: 'MEDIA_ERR_ABORTED',
+            2: 'MEDIA_ERR_NETWORK',
+            3: 'MEDIA_ERR_DECODE',
+            4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+        };
+
         /* mp3 파일 재생용 <audio> 요소 - 하나 만들어서 재사용 */
         function trpgGetAudioEl() {
             let audio = document.getElementById('trpgBgmAudio');
@@ -2993,6 +3007,10 @@
                 audio.style.display = 'none';
                 audio.volume = trpgBgmMuted ? 0 : trpgBgmVolume;
                 audio.addEventListener('ended', () => trpgBgmNext());
+                audio.addEventListener('error', () => {
+                    const code = audio.error ? audio.error.code : 0;
+                    trpgShowBgmError(TRPG_MEDIA_ERROR_NAMES[code] || code);
+                });
                 document.body.appendChild(audio);
             }
             return audio;
@@ -3019,7 +3037,9 @@
                바로 다음 줄의 play()가 아예 실행되지 않는 경우가 있었음(재생바 UI는
                정상 반응하는데 소리만 전혀 안 나는 원인). 새 src는 어차피 0초부터
                시작하므로 이 줄 자체가 불필요했음 */
-            audio.play().catch(() => {});
+            audio.play().catch((err) => {
+                trpgShowBgmError(err && err.name ? err.name : 'PLAY_REJECTED');
+            });
         }
 
         /* 일시정지/재생 전환. 버튼 아이콘은 실제 재생 상태가 아니라 사용자가 누른
@@ -3028,7 +3048,12 @@
             const audio = document.getElementById('trpgBgmAudio');
             if (!audio) return;
             if (trpgIsPlayingIntent) { audio.pause(); trpgIsPlayingIntent = false; }
-            else { audio.play().catch(() => {}); trpgIsPlayingIntent = true; }
+            else {
+                audio.play().catch((err) => {
+                    trpgShowBgmError(err && err.name ? err.name : 'PLAY_REJECTED');
+                });
+                trpgIsPlayingIntent = true;
+            }
             trpgUpdatePlayPauseIcon();
         }
 
@@ -3830,6 +3855,22 @@ ${diceResultCss}
     return root ? Array.prototype.slice.call(root.querySelectorAll('.trpg-bgm-btn')) : [];
   }
 
+  /* 재생 실패 시 원인을 화면(재생바 제목 자리)에 바로 보여준다. 모바일에서는
+     방문자가 개발자도구를 열어볼 수 없어서, 조용히 실패하면 왜 안 되는지 확인할
+     방법이 아예 없었음 - 이제 여기 뜨는 문구를 캡처해서 알려주면 원인을 바로
+     확인할 수 있다 */
+  function showBgmError(reason) {
+    var titleEl = document.getElementById('trpgBgmBarTitle');
+    if (titleEl) titleEl.textContent = '재생 실패 (' + reason + ')';
+  }
+
+  var MEDIA_ERROR_NAMES = {
+    1: 'MEDIA_ERR_ABORTED',
+    2: 'MEDIA_ERR_NETWORK',
+    3: 'MEDIA_ERR_DECODE',
+    4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+  };
+
   /* mp3 파일 재생용 <audio> 요소 - 하나 만들어서 재사용 */
   function getAudioEl() {
     var audio = document.getElementById('trpgBgmAudio');
@@ -3839,6 +3880,10 @@ ${diceResultCss}
       audio.style.display = 'none';
       audio.volume = bgmMuted ? 0 : bgmVolume;
       audio.addEventListener('ended', function() { bgmNext(); });
+      audio.addEventListener('error', function() {
+        var code = audio.error ? audio.error.code : 0;
+        showBgmError(MEDIA_ERROR_NAMES[code] || code);
+      });
       document.body.appendChild(audio);
     }
     return audio;
@@ -3862,7 +3907,9 @@ ${diceResultCss}
     /* currentTime=0 강제 설정 제거 - 새 src 직후 메타데이터 로드 전에 건드리면
        일부 모바일 브라우저에서 조용히 예외가 나서 바로 다음 play()가 실행 안 될
        수 있음. 새 src는 어차피 0초부터 시작해서 이 줄이 애초에 불필요했음 */
-    audio.play().catch(function() {});
+    audio.play().catch(function(err) {
+      showBgmError(err && err.name ? err.name : 'PLAY_REJECTED');
+    });
   }
 
   /* 일시정지/재생 전환. 아이콘은 실제 재생 상태가 아니라 사용자가 누른 의도를
@@ -3871,7 +3918,12 @@ ${diceResultCss}
     var audio = document.getElementById('trpgBgmAudio');
     if (!audio) return;
     if (isPlayingIntent) { audio.pause(); isPlayingIntent = false; }
-    else { audio.play().catch(function() {}); isPlayingIntent = true; }
+    else {
+      audio.play().catch(function(err) {
+        showBgmError(err && err.name ? err.name : 'PLAY_REJECTED');
+      });
+      isPlayingIntent = true;
+    }
     updatePlayPauseIcon();
   }
 
