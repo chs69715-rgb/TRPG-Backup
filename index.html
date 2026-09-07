@@ -3013,7 +3013,12 @@
             const audio = trpgGetAudioEl();
             audio.src = btn.getAttribute('data-audio-src');
             audio.muted = false;
-            audio.currentTime = 0;
+            /* ⚡ currentTime=0을 여기서 강제로 설정하지 않음 - 새 src를 막 지정한
+               직후라 아직 메타데이터가 로드되기 전인데, 이 상태에서 currentTime을
+               건드리면 일부 모바일 브라우저(iOS 사파리 등)가 조용히 예외를 던져서
+               바로 다음 줄의 play()가 아예 실행되지 않는 경우가 있었음(재생바 UI는
+               정상 반응하는데 소리만 전혀 안 나는 원인). 새 src는 어차피 0초부터
+               시작하므로 이 줄 자체가 불필요했음 */
             audio.play().catch(() => {});
         }
 
@@ -3854,7 +3859,9 @@ ${diceResultCss}
     var audio = getAudioEl();
     audio.src = btn.getAttribute('data-audio-src');
     audio.muted = false;
-    audio.currentTime = 0;
+    /* currentTime=0 강제 설정 제거 - 새 src 직후 메타데이터 로드 전에 건드리면
+       일부 모바일 브라우저에서 조용히 예외가 나서 바로 다음 play()가 실행 안 될
+       수 있음. 새 src는 어차피 0초부터 시작해서 이 줄이 애초에 불필요했음 */
     audio.play().catch(function() {});
   }
 
