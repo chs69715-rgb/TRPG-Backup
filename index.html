@@ -3909,9 +3909,65 @@ ${diceResultCss}
     });
   }
 
+  /* 카카오톡/라인/인스타그램/디스코드 등 '인앱 브라우저'는 화면(재생바) 반응은
+     정상인데 오디오 재생 권한만 제한돼 있어서 소리가 안 나는 경우가 많다.
+     카카오톡·라인은 공식적으로 제공하는 '외부 브라우저로 열기' 링크 스킴이 있어서
+     자동으로 넘겨줄 수 있고, 안드로이드는 인텐트 방식으로 크롬을 강제로 띄울 수
+     있다. iOS의 다른 인앱 브라우저(인스타그램·디스코드 등)는 OS 자체가 자동 이동을
+     막고 있어서 그 경우에만 안내 문구를 보여준다 */
+  function tryEscapeInAppBrowser() {
+    var ua = navigator.userAgent || '';
+    var url = location.href;
+
+    if (/KAKAOTALK/i.test(ua)) {
+      location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+      return 'redirecting';
+    }
+    if (/\\bLine\\//i.test(ua) && url.indexOf('openExternalBrowser=1') === -1) {
+      var sep = url.indexOf('?') > -1 ? '&' : '?';
+      location.href = url + sep + 'openExternalBrowser=1';
+      return 'redirecting';
+    }
+
+    var isOtherInApp = /Instagram|FBAN|FBAV|NAVER|Discord|WhatsApp/i.test(ua);
+    if (!isOtherInApp) return 'not-inapp';
+
+    if (/Android/i.test(ua)) {
+      try {
+        location.href = 'intent://' + url.replace(/^https?:\\/\\//i, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+        return 'redirecting';
+      } catch (e) {}
+    }
+    return 'blocked'; /* iOS 등 - 자동으로 못 옮기는 경우 */
+  }
+
+  function showInAppBrowserNotice() {
+    if (document.getElementById('trpgInAppNotice')) return;
+    var notice = document.createElement('div');
+    notice.id = 'trpgInAppNotice';
+    notice.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:1000000;' +
+      'background:#3b2e4b;color:#fff;padding:10px 14px;font-size:0.82rem;' +
+      'font-family:Pretendard,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.35);' +
+      'display:flex;align-items:center;gap:10px;';
+    var msg = document.createElement('span');
+    msg.style.flex = '1';
+    msg.textContent = '지금 앱 안의 브라우저로 보고 있어서 배경음악이 안 들릴 수 있어요. 우측 상단 메뉴(⋯) 또는 공유 버튼에서 \\'다른 브라우저로 열기\\'를 눌러주세요.';
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = 'background:none;border:none;color:#fff;font-size:1rem;cursor:pointer;padding:2px 6px;flex-shrink:0;';
+    closeBtn.addEventListener('click', function() { notice.remove(); });
+    notice.appendChild(msg);
+    notice.appendChild(closeBtn);
+    document.body.appendChild(notice);
+  }
+
   function init() {
     var root = document.querySelector(containerSelector);
     if (!root) return;
+
+    if (tryEscapeInAppBrowser() === 'blocked') showInAppBrowserNotice();
+
     root.addEventListener('click', function(e) {
       var btn = e.target.closest ? e.target.closest('.trpg-bgm-btn') : null;
       if (btn) { e.stopPropagation(); bgmPlay(btn); }
