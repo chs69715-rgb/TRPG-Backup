@@ -1105,12 +1105,32 @@
 
     <!-- 이미지 관리 모달 -->
     <div id="imageMenuModal" class="modal-overlay" style="display: none;">
-        <div class="modal-card" style="width: 300px;">
-            <div class="modal-title">🖼️ 이미지 관리</div>
-            <div class="modal-desc" style="margin-bottom: 15px;">이미지 모서리를 드래그해 크기를 조절하거나,<br>아래 버튼을 눌러 삭제할 수 있습니다.</div>
+        <div class="modal-card" style="width: 340px;">
+            <div class="modal-title">🖼️ 이미지 크기 조정</div>
+            <div class="modal-desc" style="margin-bottom: 14px;">모서리를 직접 드래그해도 되고, 아래에서 정확한 크기를 입력해도 돼요.<br>이미지 파일 자체는 그대로고, 화면에 보이는 크기만 바뀌어요.</div>
+
+            <div class="modal-btns" style="margin-bottom: 14px;">
+                <button type="button" id="imgSizeUnitPxBtn" class="btn format-btn active" style="flex:1;" onclick="setImageSizeUnit('px')">픽셀</button>
+                <button type="button" id="imgSizeUnitPctBtn" class="btn format-btn" style="flex:1;" onclick="setImageSizeUnit('pct')">백분율(원본 대비)</button>
+            </div>
+
+            <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom: 10px;">
+                <div class="input-group" style="flex:1; text-align:left;">
+                    <label id="imgWidthLabel">너비 (px)</label>
+                    <input type="number" id="imgResizeWidthInput" class="text-input" min="1" oninput="onImageSizeInput('width')">
+                </div>
+                <button type="button" id="imgAspectLockBtn" class="btn format-btn active" title="너비/높이 비율 고정" style="padding: 8px 10px; margin-bottom: 1px;" onclick="toggleImageAspectLock()">🔗</button>
+                <div class="input-group" style="flex:1; text-align:left;">
+                    <label id="imgHeightLabel">높이 (px)</label>
+                    <input type="number" id="imgResizeHeightInput" class="text-input" min="1" oninput="onImageSizeInput('height')">
+                </div>
+            </div>
+            <div style="font-size: 0.72rem; color: #888; text-align:left; margin-bottom: 14px;" id="imgResizeOriginalHint"></div>
+
             <div class="modal-btns">
-                <button class="btn" onclick="closeImageMenuModal()">닫기</button>
-                <button class="btn" style="background-color: #d9534f; border-color: #d9534f;" onclick="deleteSelectedImage()">이미지 삭제</button>
+                <button class="btn" onclick="closeImageMenuModal()">취소</button>
+                <button class="btn btn-primary" onclick="applyImageResize()">적용</button>
+                <button class="btn" style="background-color: #d9534f; border-color: #d9534f;" onclick="deleteSelectedImage()">삭제</button>
             </div>
         </div>
     </div>
@@ -1400,6 +1420,13 @@
         let historyIndex = -1;
         let selectedImgElement = null;
 
+        /* 이미지 크기 조정 모달(imageMenuModal) 상태값 */
+        let imageResizeUnit = 'px';      // 'px' 또는 'pct'(원본 대비 백분율)
+        let imageAspectLocked = true;    // 너비/높이 비율 고정 여부
+        let imageResizeAspectRatio = 1;  // 모달 열 때의 너비/높이 비율(고정 시 기준값)
+        let imageNaturalW = 0;
+        let imageNaturalH = 0;
+
         /* 최근 사용한 '선택 글자 색상' - 세션(메모리)에만 유지, 저장/영구보관 안 함.
            파일을 새로 불러오거나(resetToEmptyState) 페이지를 새로고침하면 초기화됨 */
         let recentTextColors = [];
@@ -1412,8 +1439,11 @@
             resetToEmptyState();
 
             const previewEl = document.getElementById('tistoryPreview');
+            /* :not(.sp-chat-icon) - 캐릭터 인장(아바타)은 본문에 직접 넣은 이미지가
+               아니라 별도의 줄별 아이콘 교체 기능(changeLineIcon)으로 다루므로,
+               크기 조정/삭제 모달은 본문 이미지에만 뜨도록 제외 */
             previewEl.addEventListener('click', function(e) {
-                if (e.target.tagName === 'IMG') {
+                if (e.target.tagName === 'IMG' && !e.target.classList.contains('sp-chat-icon')) {
                     selectedImgElement = e.target;
                     saveState();
                 }
@@ -1423,9 +1453,8 @@
             trpgInitBgmDelegation('#tistoryPreview');
 
             previewEl.addEventListener('dblclick', function(e) {
-                if (e.target.tagName === 'IMG') {
-                    selectedImgElement = e.target;
-                    document.getElementById('imageMenuModal').style.display = 'flex';
+                if (e.target.tagName === 'IMG' && !e.target.classList.contains('sp-chat-icon')) {
+                    openImageMenuModal(e.target);
                 }
             });
 
@@ -3202,6 +3231,136 @@
                 closeImageMenuModal();
                 saveState();
             }
+        }
+
+        /* 본문 이미지를 더블클릭했을 때 크기 조정 모달을 열면서, 현재 화면에 보이는
+           크기(px)를 기본값으로 채워넣는다. 단위는 항상 픽셀/비율고정 켜짐으로
+           초기화해서, 모달을 열 때마다 예전에 다른 이미지에서 썼던 상태가 남아있지
+           않게 한다 */
+        function openImageMenuModal(img) {
+            selectedImgElement = img;
+            imageResizeUnit = 'px';
+            imageAspectLocked = true;
+
+            document.getElementById('imgSizeUnitPxBtn').classList.add('active');
+            document.getElementById('imgSizeUnitPctBtn').classList.remove('active');
+            document.getElementById('imgAspectLockBtn').textContent = '🔗';
+            document.getElementById('imgAspectLockBtn').classList.add('active');
+            document.getElementById('imgWidthLabel').textContent = '너비 (px)';
+            document.getElementById('imgHeightLabel').textContent = '높이 (px)';
+
+            imageNaturalW = img.naturalWidth || 0;
+            imageNaturalH = img.naturalHeight || 0;
+
+            const rect = img.getBoundingClientRect();
+            const currentW = Math.round(rect.width) || imageNaturalW || 1;
+            const currentH = Math.round(rect.height) || imageNaturalH || 1;
+            imageResizeAspectRatio = currentH > 0 ? currentW / currentH : 1;
+
+            document.getElementById('imgResizeWidthInput').value = currentW;
+            document.getElementById('imgResizeHeightInput').value = currentH;
+
+            const hint = document.getElementById('imgResizeOriginalHint');
+            hint.textContent = (imageNaturalW && imageNaturalH)
+                ? `원본 이미지 크기: ${imageNaturalW} x ${imageNaturalH}px`
+                : '원본 이미지 크기를 아직 확인할 수 없어요 (이미지가 로딩 중일 수 있어요)';
+
+            document.getElementById('imageMenuModal').style.display = 'flex';
+        }
+
+        /* 픽셀 ↔ 백분율(원본 이미지 대비) 전환 - 전환 시점의 값을 서로 변환해서
+           숫자가 갑자기 이상해지지 않게 함 */
+        function setImageSizeUnit(unit) {
+            if (unit === imageResizeUnit) return;
+
+            if (unit === 'pct' && (!imageNaturalW || !imageNaturalH)) {
+                alert('원본 이미지 크기를 아직 확인할 수 없어서 백분율 모드를 쓸 수 없어요. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+
+            const widthInput = document.getElementById('imgResizeWidthInput');
+            const heightInput = document.getElementById('imgResizeHeightInput');
+            const w = parseFloat(widthInput.value) || 0;
+            const h = parseFloat(heightInput.value) || 0;
+
+            if (unit === 'pct') {
+                widthInput.value = Math.round((w / imageNaturalW) * 1000) / 10;
+                heightInput.value = Math.round((h / imageNaturalH) * 1000) / 10;
+                document.getElementById('imgWidthLabel').textContent = '너비 (%)';
+                document.getElementById('imgHeightLabel').textContent = '높이 (%)';
+            } else {
+                widthInput.value = Math.round(imageNaturalW * (w / 100));
+                heightInput.value = Math.round(imageNaturalH * (h / 100));
+                document.getElementById('imgWidthLabel').textContent = '너비 (px)';
+                document.getElementById('imgHeightLabel').textContent = '높이 (px)';
+            }
+
+            imageResizeUnit = unit;
+            document.getElementById('imgSizeUnitPxBtn').classList.toggle('active', unit === 'px');
+            document.getElementById('imgSizeUnitPctBtn').classList.toggle('active', unit === 'pct');
+        }
+
+        function toggleImageAspectLock() {
+            imageAspectLocked = !imageAspectLocked;
+            const btn = document.getElementById('imgAspectLockBtn');
+            btn.textContent = imageAspectLocked ? '🔗' : '🔓';
+            btn.classList.toggle('active', imageAspectLocked);
+
+            if (imageAspectLocked) {
+                const w = parseFloat(document.getElementById('imgResizeWidthInput').value) || 0;
+                const h = parseFloat(document.getElementById('imgResizeHeightInput').value) || 0;
+                if (w > 0 && h > 0) imageResizeAspectRatio = w / h;
+            }
+        }
+
+        /* 너비나 높이 중 하나를 고치면, 비율 고정이 켜져 있을 때 나머지 하나를
+           자동으로 맞춰준다. (px든 %든 비율은 단위와 무관하게 그대로 적용 가능) */
+        function onImageSizeInput(which) {
+            if (!imageAspectLocked) return;
+            const widthInput = document.getElementById('imgResizeWidthInput');
+            const heightInput = document.getElementById('imgResizeHeightInput');
+
+            if (which === 'width') {
+                const w = parseFloat(widthInput.value);
+                if (w > 0) heightInput.value = Math.round((w / imageResizeAspectRatio) * 100) / 100;
+            } else {
+                const h = parseFloat(heightInput.value);
+                if (h > 0) widthInput.value = Math.round((h * imageResizeAspectRatio) * 100) / 100;
+            }
+        }
+
+        /* 입력된 너비/높이(픽셀 또는 백분율)를 최종 픽셀값으로 변환해서 이미지에
+           바로 적용. 실제 이미지 파일은 그대로 외부(imgur 등)에 있고, 화면에 보여줄
+           크기(style.width/height)만 바뀌는 것이므로 원본 파일 용량과는 무관함 */
+        function applyImageResize() {
+            if (!selectedImgElement) return;
+
+            const w = parseFloat(document.getElementById('imgResizeWidthInput').value);
+            const h = parseFloat(document.getElementById('imgResizeHeightInput').value);
+
+            if (!w || !h || w <= 0 || h <= 0) {
+                alert('너비와 높이를 올바르게 입력해주세요.');
+                return;
+            }
+
+            let finalWidthPx, finalHeightPx;
+            if (imageResizeUnit === 'pct') {
+                if (!imageNaturalW || !imageNaturalH) {
+                    alert('원본 이미지 크기를 확인할 수 없어서 백분율을 적용할 수 없어요.');
+                    return;
+                }
+                finalWidthPx = Math.round(imageNaturalW * (w / 100));
+                finalHeightPx = Math.round(imageNaturalH * (h / 100));
+            } else {
+                finalWidthPx = Math.round(w);
+                finalHeightPx = Math.round(h);
+            }
+
+            selectedImgElement.style.width = finalWidthPx + 'px';
+            selectedImgElement.style.height = finalHeightPx + 'px';
+
+            saveState();
+            closeImageMenuModal();
         }
 
         function applyTextFormat(type) {
