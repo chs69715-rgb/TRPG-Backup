@@ -4097,6 +4097,13 @@ ${diceResultCss}
             URL.revokeObjectURL(a.href);
         }
 
+        /* ⚡ 판정 결과 스타일(일반형/카드형/모던형)은 CSS 클래스만 바뀌는 거라
+           .sp-dice-result 등의 실제 HTML 구조는 그대로임 (위 .card-view/.plain-view/
+           .modern-card-view 스타일 규칙 참고). 그런데 예전엔 여기서
+           applySettingsWithoutLoss()를 불러서 매번 renderLogs()로 미리보기 전체를
+           다시 그렸었고, 그 결과 판정 스타일 하나만 바꿔도 사용자가 미리보기에 직접
+           넣어둔 이미지나 서식이 전부 날아가는 버그가 있었음. 클래스 전환에는
+           재렌더링이 필요 없으므로 updateCardViewClasses() + saveState()만으로 충분 */
         function togglePlainView() {
             const isPlain = document.getElementById('plainViewToggle').checked;
             if (isPlain) {
@@ -4104,7 +4111,7 @@ ${diceResultCss}
                 document.getElementById('modernCardViewToggle').checked = false;
             }
             updateCardViewClasses();
-            applySettingsWithoutLoss();
+            saveState();
         }
 
         function toggleCardView() {
@@ -4114,7 +4121,7 @@ ${diceResultCss}
                 document.getElementById('modernCardViewToggle').checked = false;
             }
             updateCardViewClasses();
-            applySettingsWithoutLoss();
+            saveState();
         }
 
         function toggleModernCardView() {
@@ -4124,7 +4131,7 @@ ${diceResultCss}
                 document.getElementById('cardViewToggle').checked = false;
             }
             updateCardViewClasses();
-            applySettingsWithoutLoss();
+            saveState();
         }
 
         function updateCardViewClasses() {
