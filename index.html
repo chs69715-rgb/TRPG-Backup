@@ -428,6 +428,15 @@
             resize: both;
             overflow: auto;
             vertical-align: middle;
+            /* ⚡ 이미지 몸통을 (모서리 리사이즈 손잡이가 아니라) 그냥 클릭+드래그하면
+               브라우저가 "이 이미지를 다른 곳에 끌어다 놓기" 같은 자체 네이티브 드래그를
+               시작해버리는데, 이때 Photoshop처럼 이미지를 열 수 있는 프로그램이 설치돼
+               있으면 윈도우가 그 프로그램을 드롭 대상으로 보여주면서 화면이 먹통처럼
+               보이는 문제가 있었음(사이트 코드 버그가 아니라 브라우저의 기본 이미지
+               드래그 동작 때문). user-drag: none으로 그 네이티브 드래그 자체를 꺼서
+               막음 - 모서리를 드래그해서 크기 조절하는 resize:both 기능에는 영향 없음 */
+            -webkit-user-drag: none;
+            user-drag: none;
         }
         .tistory-preview img:not(.sp-chat-icon):hover {
             outline: 2px dashed var(--accent-color);
@@ -1455,6 +1464,16 @@
             previewEl.addEventListener('dblclick', function(e) {
                 if (e.target.tagName === 'IMG' && !e.target.classList.contains('sp-chat-icon')) {
                     openImageMenuModal(e.target);
+                }
+            });
+
+            /* CSS user-drag:none을 지원하지 않는 브라우저를 위한 보험: 이미지 몸통을
+               클릭+드래그했을 때 브라우저 자체의 "이미지 끌어놓기" 동작이 아예
+               시작되지 않도록 dragstart 자체를 막음 (모서리 리사이즈 드래그는
+               dragstart가 아니라 별개의 네이티브 리사이즈 동작이라 영향 없음) */
+            previewEl.addEventListener('dragstart', function(e) {
+                if (e.target.tagName === 'IMG') {
+                    e.preventDefault();
                 }
             });
 
