@@ -4097,13 +4097,20 @@ ${diceResultCss}
             URL.revokeObjectURL(a.href);
         }
 
-        /* ⚡ 판정 결과 스타일(일반형/카드형/모던형)은 CSS 클래스만 바뀌는 거라
-           .sp-dice-result 등의 실제 HTML 구조는 그대로임 (위 .card-view/.plain-view/
-           .modern-card-view 스타일 규칙 참고). 그런데 예전엔 여기서
-           applySettingsWithoutLoss()를 불러서 매번 renderLogs()로 미리보기 전체를
-           다시 그렸었고, 그 결과 판정 스타일 하나만 바꿔도 사용자가 미리보기에 직접
-           넣어둔 이미지나 서식이 전부 날아가는 버그가 있었음. 클래스 전환에는
-           재렌더링이 필요 없으므로 updateCardViewClasses() + saveState()만으로 충분 */
+        /* ⚡ 판정 결과 스타일(일반형/카드형/모던형)은 사실 CSS 클래스만 바뀌는 게 아니라
+           판정 결과 블록(.sp-dice-only-line) 내부의 실제 HTML 구조 자체가 다름
+           (일반형은 그냥 텍스트, 카드형은 <table class="dice-card-table">, 모던형은
+           <details class="modern-details-toggle">...) - renderDiceOnly() 참고.
+           예전엔 여기서 applySettingsWithoutLoss()를 불러서 매번 renderLogs()로
+           미리보기 전체를 다시 그렸었고, 그 결과 판정 스타일 하나만 바꿔도 사용자가
+           미리보기에 직접 넣어둔 이미지나 서식이 전부 날아가는 버그가 있었음.
+           그렇다고 재렌더링을 아예 안 하면(클래스만 바꾸면) 이미 그려진 판정 결과
+           블록들의 내부 구조가 안 바뀌어서 스타일 전환 자체가 안 먹는 문제가 생김.
+           그래서 절충: logData를 돌면서 type이 'dice'인 블록만 data-index로 찾아
+           그 블록의 판정 결과 마크업만 renderDiceOnly()로 다시 그려 넣는다
+           (updateDiceResultStyles()). 판정 결과가 아닌 다른 블록(캐릭터 대사, 나레이션,
+           사용자가 직접 넣은 이미지 등)은 전혀 건드리지 않으므로 데이터 손실 버그는
+           재발하지 않음 */
         function togglePlainView() {
             const isPlain = document.getElementById('plainViewToggle').checked;
             if (isPlain) {
@@ -4111,6 +4118,7 @@ ${diceResultCss}
                 document.getElementById('modernCardViewToggle').checked = false;
             }
             updateCardViewClasses();
+            updateDiceResultStyles();
             saveState();
         }
 
@@ -4121,6 +4129,7 @@ ${diceResultCss}
                 document.getElementById('modernCardViewToggle').checked = false;
             }
             updateCardViewClasses();
+            updateDiceResultStyles();
             saveState();
         }
 
@@ -4131,7 +4140,26 @@ ${diceResultCss}
                 document.getElementById('cardViewToggle').checked = false;
             }
             updateCardViewClasses();
+            updateDiceResultStyles();
             saveState();
+        }
+
+        /* logData 중 type이 'dice'인 항목만 골라, 미리보기에 남아있는 해당 블록
+           (.log-block-wrapper[data-index]) 안의 판정 결과 마크업(.sp-dice-only-line)만
+           renderDiceOnly()로 새로 그려서 교체한다. 판정 결과가 아닌 블록이나, 사용자가
+           판정 결과 블록 앞뒤에 따로 추가한 내용에는 전혀 손대지 않는다. */
+        function updateDiceResultStyles() {
+            const preview = document.getElementById('tistoryPreview');
+            if (!preview) return;
+
+            logData.forEach((log, index) => {
+                if (!log || log.type !== 'dice') return;
+                const wrapper = preview.querySelector(`.log-block-wrapper[data-index="${index}"]`);
+                if (!wrapper) return;
+                const oldContent = wrapper.querySelector(':scope > .sp-dice-only-line');
+                if (!oldContent) return;
+                oldContent.outerHTML = renderDiceOnly(log, index, logData);
+            });
         }
 
         function updateCardViewClasses() {
