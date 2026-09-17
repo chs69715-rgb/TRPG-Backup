@@ -793,6 +793,18 @@
             opacity: 0 !important;
         }
 
+        /* ⚡ 편집기 미리보기에서만: 대사 줄의 아이콘을 클릭하면 그 줄만 다른 아이콘으로
+           바꿀 수 있음 (changeLineIcon). 연속 대사(아이콘이 숨겨진 sp-chat-continuation)는
+           클릭해도 의미가 없으니 커서/테두리 강조를 주지 않음. 내보낸 티스토리 코드에는
+           이 클래스가 안 들어가므로 블로그 독자에게는 그냥 평범한 이미지로 보임 */
+        .tistory-preview .sp-chat-line:not(.sp-chat-continuation) .sp-chat-icon {
+            cursor: pointer;
+        }
+        .tistory-preview .sp-chat-line:not(.sp-chat-continuation) .sp-chat-icon:hover {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+
         .sp-chat-body { flex: 1; }
 
         .sp-chat-name {
@@ -2467,9 +2479,22 @@
             </div>`;
         }
 
+        /* 아이콘 <img>/<div> 마크업 생성 - renderChatGroup과 updateLineIconInDom(줄별
+           아이콘 교체)에서 공용으로 사용 */
+        function buildChatIconHtml(iconSrc, isTransparent) {
+            const transparentClass = isTransparent ? ' transparent-icon' : '';
+            const transparentStyle = isTransparent ? ' opacity: 0 !important; background-color: transparent !important;' : '';
+            return iconSrc
+                ? `<img class="sp-chat-icon${transparentClass}" style="${transparentStyle}" src="${iconSrc}" alt="" />`
+                : `<div class="sp-chat-icon${transparentClass}" style="${transparentStyle}"></div>`;
+        }
+
         function renderChatGroup(group) {
             const charInfo = characterMap[group.name] || { icon: '', color: '#333333', transparent: false };
-            const iconSrc = charInfo.icon;
+            /* ⚡ 같은 캐릭터라도 특정 줄만 다른 아이콘을 쓸 수 있게, 그 줄(첫 아이템)에
+               iconOverride가 있으면 캐릭터 기본 아이콘보다 그걸 우선 사용 */
+            const overrideSrc = group.items[0] && group.items[0].iconOverride;
+            const iconSrc = overrideSrc || charInfo.icon;
             const nameColor = charInfo.color;
             const isTransparent = charInfo.transparent;
 
@@ -2482,17 +2507,70 @@
                 groupBodyInner += `<div class="sp-chat-text" data-placeholder="대사를 입력하세요.">${item.text || ''}</div>`;
             });
 
-            const transparentClass = isTransparent ? ' transparent-icon' : '';
-            const transparentStyle = isTransparent ? ' opacity: 0 !important; background-color: transparent !important;' : '';
-
             return `
             <div class="sp-chat-line">
-                ${iconSrc ? `<img class="sp-chat-icon${transparentClass}" style="${transparentStyle}" src="${iconSrc}" alt="" />` : `<div class="sp-chat-icon${transparentClass}" style="${transparentStyle}"></div>`}
+                ${buildChatIconHtml(iconSrc, isTransparent)}
                 <div class="sp-chat-body">
                     ${groupBodyInner}
                 </div>
             </div>`;
         }
+
+        /* 대사 줄의 아이콘을 클릭했을 때: 그 줄만 다른 아이콘 URL로 바꾸거나
+           (비워두면) 캐릭터 기본 아이콘으로 되돌림. logData[index].iconOverride에
+           저장되며, .trpg 파일에도 그대로 같이 저장/로드됨 */
+        function changeLineIcon(index) {
+            const log = logData[index];
+            if (!log || log.type !== 'chat') return;
+
+            const current = log.iconOverride || '';
+            const input = window.prompt(
+                '이 줄에서만 사용할 아이콘 이미지 URL을 입력하세요.\n비워두고 확인을 누르면 캐릭터 기본 아이콘으로 돌아가요.',
+                current
+            );
+            if (input === null) return; // 취소
+
+            const trimmed = input.trim();
+            if (trimmed) {
+                log.iconOverride = trimmed;
+            } else {
+                delete log.iconOverride;
+            }
+
+            updateLineIconInDom(index);
+            saveState();
+        }
+
+        /* changeLineIcon 직후, 미리보기 전체를 다시 그리지 않고 해당 줄의 아이콘
+           마크업만 교체 (다른 줄에 넣어둔 이미지·서식은 건드리지 않음) */
+        function updateLineIconInDom(index) {
+            const preview = document.getElementById('tistoryPreview');
+            const log = logData[index];
+            if (!preview || !log) return;
+
+            const wrapper = preview.querySelector(`.log-block-wrapper[data-index="${index}"]`);
+            if (!wrapper) return;
+            const oldIcon = wrapper.querySelector(':scope > .sp-chat-line > .sp-chat-icon');
+            if (!oldIcon) return;
+
+            const charInfo = characterMap[log.name] || { icon: '', color: '#333333', transparent: false };
+            const iconSrc = log.iconOverride || charInfo.icon;
+            oldIcon.outerHTML = buildChatIconHtml(iconSrc, charInfo.transparent);
+        }
+
+        /* 대사 아이콘 클릭 위임 처리 - 연속 대사(아이콘이 숨겨진 줄)는 제외 */
+        document.getElementById('tistoryPreview').addEventListener('click', function(e) {
+            const icon = e.target.closest('.sp-chat-icon');
+            if (!icon) return;
+            const chatLine = icon.closest('.sp-chat-line');
+            if (chatLine && chatLine.classList.contains('sp-chat-continuation')) return;
+            const wrapper = icon.closest('.log-block-wrapper');
+            if (!wrapper) return;
+            const indexStr = wrapper.getAttribute('data-index');
+            if (indexStr === null) return;
+            e.preventDefault();
+            changeLineIcon(parseInt(indexStr, 10));
+        });
 
         /* 연속 대사(같은 캐릭터) 병합용: 이름/인장 없이 텍스트만 이어서 출력 */
         function renderChatContinuation(log) {
